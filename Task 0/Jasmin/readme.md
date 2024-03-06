@@ -1,0 +1,1 @@
+My solution involves simply calculating the mean without using machine learning.
