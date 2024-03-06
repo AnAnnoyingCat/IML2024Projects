@@ -7,12 +7,12 @@ from sklearn import model_selection
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, PredictionErrorDisplay
 
 #training data
-trainingData = pd.read_csv('train.csv', sep=',')
+trainingData = pd.read_csv('Data\\train.csv', sep=',')
 X = trainingData.iloc[:,2:12]
 y = trainingData['y']
 
 #prediction data
-predData = pd.read_csv('test.csv', sep=',')
+predData = pd.read_csv('Data\\test.csv', sep=',')
 X_pred = predData.iloc[:,1:11]
 id = predData.iloc[:, 0]
 
@@ -45,6 +45,6 @@ results = pd.DataFrame({
 	'Id': id,
 	'y': pred
 })
-print("Saving Results to \"prediction.csv\"...")
+print("Saving Results to \"Data\\prediction.csv\"...")
 
-results.to_csv('prediction.csv', sep=',', index=False)
+results.to_csv('Data\\prediction.csv', sep=',', index=False)
