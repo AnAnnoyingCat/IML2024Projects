@@ -29,6 +29,7 @@ lr.fit(X_train, y_train)
 lr.predict(X_test)
 pred = lr.predict(X_test)
 
+# Checking the metrics as show in the tutorial from March 5, 2024
 # The coefficients
 print("Coefficients: \n", lr.coef_)
 # Evaluating Model's Performance
