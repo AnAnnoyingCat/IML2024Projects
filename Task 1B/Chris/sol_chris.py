@@ -74,8 +74,8 @@ def fit(X, y):
     X_train, X_test, y_train, y_test = train_test_split(X_transformed, y, test_size=0.2, random_state=13)
 
 
-    ITERATIONS = [5, 10, 15, 20, 100, 1000, 3500, 6500, 10000, 20000, 50000, 100000, 200000, 500000]
-    LEARNING_RATES = [0.15, 0.125, 0.1, 0.09, 0.07, 0.05, 0.025]#, 0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00001, 0.000001
+    ITERATIONS = [3, 4, 5, 6, 7, 8, 9, 10]# 100, 1000, 3500, 6500, 10000, 20000, 50000, 100000, 200000, 500000]
+    LEARNING_RATES = [0.125, 0.13, 0.133, 0.136, 0.139]
     #ITERATIONS = [5, 10, 15, 20, 50, 100, 150,200, 300, 500, 700, 850, 1000]
     #LEARNING_RATES = [0.15, 0.125, 0.1]
 
@@ -94,7 +94,7 @@ def fit(X, y):
         currRate += 1
     saveManyPlots(RMSE_mat, ITERATIONS, LEARNING_RATES)
 
-    w = myLinearRegression(X_train, y_train, 0.1, 200)
+    w = myLinearRegression(X_train, y_train, 0.133, 4)
     #savePlot(ITERATIONS, cost_list)
     assert w.shape == (21,)
     return w
@@ -113,8 +113,7 @@ def myLinearRegression(X, y, learning_rate, iterations):
 
         cost = (1/(2*m)) * np.sum(np.square(y_pred - y))
 
-        d_weights = (1/m) * np.dot(X.T, (y_pred - y.T))
-        uhm = (y - y_pred)
+        d_weights = (1/m) * np.dot(X.T, (y_pred - y))
         weights = weights - learning_rate * d_weights
         #cost_list.append(cost)
 
@@ -132,7 +131,7 @@ def savePlot(iterations, cost_list):
 
 def saveManyPlots(RMSE_mat, ITERATIONS, LEARNING_RATES):
     for r in range(len(LEARNING_RATES)):
-        plt.clf()
+        #plt.clf()
         plt.yscale("log")
         plt.plot(ITERATIONS, RMSE_mat[r,:])
         plt.title(("Change of RMSE with learning rate " + str(LEARNING_RATES[r])))
