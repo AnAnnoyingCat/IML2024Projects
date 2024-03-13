@@ -31,7 +31,7 @@ def fit(X, y, lam):
     w = np.zeros((13,))
     # TODO: Enter your code here
 
-    ridgeModel = Ridge(lam)
+    ridgeModel = Ridge(alpha=lam, fit_intercept=False)
     ridgeModel.fit(X, y)
     w = ridgeModel.coef_
 
@@ -89,7 +89,6 @@ def average_LR_RMSE(X, y, lambdas, n_folds):
     # and fill all entries in the matrix 'RMSE_mat'
 
     kf = KFold(n_splits=n_folds)
-    i_lam = 0
 
     for i_lam in range(len(lambdas)):
         i_fold = 0
@@ -98,7 +97,6 @@ def average_LR_RMSE(X, y, lambdas, n_folds):
             w = fit(X_train, y_train, lambdas[i_lam])
             RMSE_mat[i_fold, i_lam] = calculate_RMSE(w, X_test, y_test)
             i_fold += 1
-        
 
     # end TODO
 
