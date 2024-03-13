@@ -5,9 +5,12 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import KFold
 
-# Add any additional imports here (however, the task is solvable without using 
+# Add any additional imports here (however, the task is solvable without using
 # any additional imports)
 # import ...
+from sklearn.linear_model import Ridge
+from sklearn.metrics import mean_squared_error
+
 
 def fit(X, y, lam):
     """
@@ -27,6 +30,12 @@ def fit(X, y, lam):
     """
     w = np.zeros((13,))
     # TODO: Enter your code here
+
+    ridgeModel = Ridge(lam)
+    ridgeModel.fit(X, y)
+    w = ridgeModel.coef_
+
+    # end TODO
     assert w.shape == (13,)
     return w
 
@@ -46,7 +55,14 @@ def calculate_RMSE(w, X, y):
     RMSE: float: dim = 1, RMSE value
     """
     RMSE = 0
+
     # TODO: Enter your code here
+
+    y_pred = np.dot(X, w)  # find y_pred w/ help of X and w
+    RMSE = mean_squared_error(y, y_pred, squared=False)
+
+    # end TODO
+
     assert np.isscalar(RMSE)
     return RMSE
 
@@ -55,14 +71,14 @@ def average_LR_RMSE(X, y, lambdas, n_folds):
     """
     Main cross-validation loop, implementing 10-fold CV. In every iteration (for every train-test split), the RMSE for every lambda is calculated, 
     and then averaged over iterations.
-    
+
     Parameters
     ---------- 
     X: matrix of floats, dim = (150, 13), inputs with 13 features
     y: array of floats, dim = (150, ), input labels
     lambdas: list of floats, len = 5, values of lambda for which ridge regression is fitted and RMSE estimated
     n_folds: int, number of folds (pieces in which we split the dataset), parameter K in KFold CV
-    
+
     Returns
     ----------
     avg_RMSE: array of floats: dim = (5,), average RMSE value for every lambda
@@ -72,6 +88,20 @@ def average_LR_RMSE(X, y, lambdas, n_folds):
     # TODO: Enter your code here. Hint: Use functions 'fit' and 'calculate_RMSE' with training and test data
     # and fill all entries in the matrix 'RMSE_mat'
 
+    kf = KFold(n_splits=n_folds)
+    i_lam = 0
+
+    for i_lam in range(len(lambdas)):
+        i_fold = 0
+        for train_index, test_index in kf.split(X):
+            X_train, X_test, y_train, y_test = X[train_index], X[test_index], y[train_index], y[test_index]
+            w = fit(X_train, y_train, lambdas[i_lam])
+            RMSE_mat[i_fold, i_lam] = calculate_RMSE(w, X_test, y_test)
+            i_fold += 1
+        
+
+    # end TODO
+
     avg_RMSE = np.mean(RMSE_mat, axis=0)
     assert avg_RMSE.shape == (5,)
     return avg_RMSE
@@ -80,7 +110,7 @@ def average_LR_RMSE(X, y, lambdas, n_folds):
 # Main function. You don't have to change this
 if __name__ == "__main__":
     # Data loading
-    data = pd.read_csv("train.csv")
+    data = pd.read_csv("Data/train.csv")
     y = data["y"].to_numpy()
     data = data.drop(columns="y")
     # print a few data samples
@@ -92,4 +122,5 @@ if __name__ == "__main__":
     n_folds = 10
     avg_RMSE = average_LR_RMSE(X, y, lambdas, n_folds)
     # Save results in the required format
-    np.savetxt("./results.csv", avg_RMSE, fmt="%.12f")
+    np.savetxt("./Jasmin/results.csv", avg_RMSE, fmt="%.12f")
+    #print("done")
