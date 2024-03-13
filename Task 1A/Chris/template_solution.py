@@ -72,6 +72,17 @@ def average_LR_RMSE(X, y, lambdas, n_folds):
     # TODO: Enter your code here. Hint: Use functions 'fit' and 'calculate_RMSE' with training and test data
     # and fill all entries in the matrix 'RMSE_mat'
 
+    kf = KFold(n_splits=n_folds)
+
+    numLam = 0
+    for l in lambdas:
+        numFold = 0
+        for train, test in kf.split(X):
+            X_train, X_test, y_train, y_test = X[train], X[test], y[train], y[test]
+            w = fit(X_train, y_train, l)
+            RMSE_mat[numFold][numLam] = calculate_RMSE(w, X_test, y_test)
+            numFold += 1
+        numLam += 1
     avg_RMSE = np.mean(RMSE_mat, axis=0)
     assert avg_RMSE.shape == (5,)
     return avg_RMSE
@@ -80,7 +91,7 @@ def average_LR_RMSE(X, y, lambdas, n_folds):
 # Main function. You don't have to change this
 if __name__ == "__main__":
     # Data loading
-    data = pd.read_csv("train.csv")
+    data = pd.read_csv("Task 1A\\Data\\train.csv")
     y = data["y"].to_numpy()
     data = data.drop(columns="y")
     # print a few data samples
@@ -92,4 +103,4 @@ if __name__ == "__main__":
     n_folds = 10
     avg_RMSE = average_LR_RMSE(X, y, lambdas, n_folds)
     # Save results in the required format
-    np.savetxt("./results.csv", avg_RMSE, fmt="%.12f")
+    np.savetxt("Task 1A\\Chris\\res.csv", avg_RMSE, fmt="%.12f")
