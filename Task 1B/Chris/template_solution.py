@@ -27,7 +27,27 @@ def transform_data(X):
     X_transformed: array of floats: dim = (700,21), transformed input with 21 features
     """
     X_transformed = np.zeros((700, 21))
-    # TODO: Enter your code here
+
+    #Linear
+    for i in range(5):
+        X_transformed[:,i] = X[:, i]
+
+    #Quadratic
+    for i in range(5):
+        X_transformed[:, (5 + i)] = np.power(X[:, i], 2)
+
+    #Exponential    
+    for i in range(5):
+        X_transformed[:, 10 + i] = np.exp(X[:, i])
+    
+    #Cosine
+    for i in range(5):
+        X_transformed[:, 15 + i] = np.cos(X[:, i])
+    
+    #Constant
+    X_transformed[:, 20] = np.full(700, 1)
+
+    #print(X_transformed)
     assert X_transformed.shape == (700, 21)
     return X_transformed
 
@@ -56,7 +76,7 @@ def fit(X, y):
 # Main function. You don't have to change this
 if __name__ == "__main__":
     # Data loading
-    data = pd.read_csv("train.csv")
+    data = pd.read_csv("Task 1B\\Data\\train.csv")
     y = data["y"].to_numpy()
     data = data.drop(columns=["Id", "y"])
     # print a few data samples
@@ -66,4 +86,4 @@ if __name__ == "__main__":
     # The function retrieving optimal LR parameters
     w = fit(X, y)
     # Save results in the required format
-    np.savetxt("./results.csv", w, fmt="%.12f")
+    np.savetxt("Task 1B\\Chris\\res.csv", w, fmt="%.12f")
