@@ -49,7 +49,7 @@ def transform_data(X):
     X_transformed[:, 20] = np.full(700, 1)
 
     #print(X_transformed)
-    np.savetxt("Task 1B\\Chris\\transformed.csv", X_transformed, fmt="%.12f", delimiter=',')
+    #np.savetxt("Task 1B\\Chris\\transformed.csv", X_transformed, fmt="%.12f", delimiter=',')
     assert X_transformed.shape == (700, 21)
     return X_transformed
 
@@ -73,11 +73,9 @@ def fit(X, y):
     X_transformed = transform_data(X)
     X_train, X_test, y_train, y_test = train_test_split(X_transformed, y, test_size=0.2, random_state=13)
 
-
-    ITERATIONS = [3, 4, 5, 6, 7, 8, 9, 10]# 100, 1000, 3500, 6500, 10000, 20000, 50000, 100000, 200000, 500000]
-    LEARNING_RATES = [0.125, 0.13, 0.133, 0.136, 0.139]
-    #ITERATIONS = [5, 10, 15, 20, 50, 100, 150,200, 300, 500, 700, 850, 1000]
-    #LEARNING_RATES = [0.15, 0.125, 0.1]
+    #Lists to test different configurations of learning which will be plotted into LR-Plots
+    ITERATIONS = [3, 4, 5, 6, 7, 8, 9, 10]
+    LEARNING_RATES = [0.1358, 0.136, 0.1362,]
 
     RMSE_mat = np.zeros((len(LEARNING_RATES), len(ITERATIONS)))
     
@@ -94,7 +92,7 @@ def fit(X, y):
         currRate += 1
     saveManyPlots(RMSE_mat, ITERATIONS, LEARNING_RATES)
 
-    w = myLinearRegression(X_train, y_train, 0.133, 4)
+    w = myLinearRegression(X_train, y_train, 0.136, 4)
     #savePlot(ITERATIONS, cost_list)
     assert w.shape == (21,)
     return w
@@ -134,8 +132,7 @@ def saveManyPlots(RMSE_mat, ITERATIONS, LEARNING_RATES):
         #plt.clf()
         plt.yscale("log")
         plt.plot(ITERATIONS, RMSE_mat[r,:])
-        plt.title(("Change of RMSE with learning rate " + str(LEARNING_RATES[r])))
-        #plt.savefig("Task 1B\\Chris\\LR-Plots\\rate" + str(r) + ".png")
+        plt.title(("Change of RMSE with learning rate " + str(LEARNING_RATES[r]) + ". Min value is " + str(np.min(RMSE_mat[r, :]))))
         name = "Task 1B\\Chris\\LR-Plots\\rate" + str(r) + ".png"
         plt.savefig(name)
 
