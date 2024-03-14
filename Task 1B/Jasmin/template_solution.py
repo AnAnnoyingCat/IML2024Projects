@@ -4,9 +4,14 @@
 import numpy as np
 import pandas as pd
 
-# Add any additional imports here (however, the task is solvable without using 
+# Add any additional imports here (however, the task is solvable without using
 # any additional imports)
 # import ...
+
+from sklearn.linear_model import SGDRegressor
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
 
 def transform_data(X):
     """
@@ -28,6 +33,31 @@ def transform_data(X):
     """
     X_transformed = np.zeros((700, 21))
     # TODO: Enter your code here
+
+    # Linear
+    for i in range(5):
+        X_transformed[:, i] = X[:, i]
+
+    # Quadratic
+    for i in range(5):
+        X_transformed[:, (5 + i)] = np.power(X[:, i], 2)
+
+    # Exponential
+    for i in range(5):
+        X_transformed[:, 10 + i] = np.exp(X[:, i])
+
+    # Cosine
+    for i in range(5):
+        X_transformed[:, 15 + i] = np.cos(X[:, i])
+
+    # Constant
+    X_transformed[:, 20] = np.full(700, 1)
+
+    # print(X_transformed)
+    np.savetxt("Task 1B\\Chris\\transformed.csv",
+               X_transformed, fmt="%.12f", delimiter=',')
+
+    # End TODO
     assert X_transformed.shape == (700, 21)
     return X_transformed
 
@@ -49,6 +79,13 @@ def fit(X, y):
     w = np.zeros((21,))
     X_transformed = transform_data(X)
     # TODO: Enter your code here
+
+    lrModel = SGDRegressor(
+        max_iter=10, learning_rate='constant', eta0=0.136)
+    lrModel.fit(X_transformed, y)
+    w = lrModel.coef_
+
+    # End TODO
     assert w.shape == (21,)
     return w
 
@@ -56,7 +93,7 @@ def fit(X, y):
 # Main function. You don't have to change this
 if __name__ == "__main__":
     # Data loading
-    data = pd.read_csv("train.csv")
+    data = pd.read_csv("Task 1B\\Data\\train.csv")
     y = data["y"].to_numpy()
     data = data.drop(columns=["Id", "y"])
     # print a few data samples
@@ -66,4 +103,4 @@ if __name__ == "__main__":
     # The function retrieving optimal LR parameters
     w = fit(X, y)
     # Save results in the required format
-    np.savetxt("./results.csv", w, fmt="%.12f")
+    np.savetxt("Task 1B\\Jasmin\\results.csv", w, fmt="%.12f")
