@@ -9,8 +9,11 @@ import pandas as pd
 # import ...
 
 from sklearn.linear_model import SGDRegressor
+from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
 
 
 def transform_data(X):
@@ -54,7 +57,7 @@ def transform_data(X):
     X_transformed[:, 20] = np.full(700, 1)
 
     # print(X_transformed)
-    np.savetxt("Task 1B\\Chris\\transformed.csv",
+    np.savetxt("Task 1B\\Jasmin\\transformed.csv",
                X_transformed, fmt="%.12f", delimiter=',')
 
     # End TODO
@@ -80,10 +83,28 @@ def fit(X, y):
     X_transformed = transform_data(X)
     # TODO: Enter your code here
 
-    lrModel = SGDRegressor(
-        max_iter=10, learning_rate='constant', eta0=0.136)
+    """ lrModel = make_pipeline(StandardScaler, SGDRegressor(max_iter=10, learning_rate='constant', eta0=0.136))
     lrModel.fit(X_transformed, y)
-    w = lrModel.coef_
+    w = lrModel.steps[-1][1].coef_ """
+
+    # THIS DOES NOT WORK AT ALL
+    """ scaler = StandardScaler()
+    scaler.fit(X_transformed)
+    scaled_X_train = scaler.transform(X_transformed)
+    clf = SGDRegressor(max_iter=10, learning_rate="constant", eta0=0.136)
+    clf.fit(scaled_X_train, y)
+    w = clf.coef_ """
+
+    X_train, X_test, y_train, y_test = train_test_split(X_transformed, y, test_size=0.2, random_state=13)
+    clf = LinearRegression()
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    print("RMSE: " + str(mean_squared_error(y_test, y_pred, squared=False)))
+    w = clf.coef_
+
+
+
+
 
     # End TODO
     assert w.shape == (21,)
