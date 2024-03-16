@@ -7,13 +7,15 @@ import pandas as pd
 # Add any additional imports here (however, the task is solvable without using
 # any additional imports)
 # import ...
-
+from matplotlib import pyplot as plt
 from sklearn.linear_model import SGDRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+from sklearn.linear_model import Ridge
+from sklearn.linear_model import Lasso
 
 
 def transform_data(X):
@@ -95,17 +97,70 @@ def fit(X, y):
     clf.fit(scaled_X_train, y)
     w = clf.coef_ """
 
-    X_train, X_test, y_train, y_test = train_test_split(X_transformed, y, test_size=0.2, random_state=13)
+    # A LITTLE BETTER, BUT STILL VERY BAD
+    """ X_train, X_test, y_train, y_test = train_test_split(X_transformed, y, test_size=0.2, random_state=13)
     clf = LinearRegression()
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
     print("RMSE: " + str(mean_squared_error(y_test, y_pred, squared=False)))
     w = clf.coef_
+    plt.scatter(range(len(y_pred)), y_pred, color='blue', label='Predicted')
+    plt.scatter(range(len(y_test)), y_test, color='red', label='Actual')
 
+    # Add labels and title
+    plt.xlabel('Index')
+    plt.ylabel('Value')
+    plt.title('Comparison of Predicted and Actual Values')
 
+    # Add legend
+    plt.legend()
 
+    # Show plot
+    plt.show()
+    #plt.savefig("Task 1B\\Jasmin\\plot.png") """
 
+    # using a scaler GIVES PUBLIC SCORE OF ABOUT 280
+    """ X_train, X_test, y_train, y_test = train_test_split(X_transformed, y, test_size=0.2, random_state=13)
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    model = LinearRegression()
+    model.fit(X_train_scaled, y_train)
+    y_pred = model.predict(X_test_scaled)
+    rmse = mean_squared_error(y_test, y_pred, squared=False)
+    print("RMSE w/ scaling & lin. reg: ", rmse)
+    w= model.coef_ """
 
+    # using ridge model, FINALLY HAS SIMPLE BASELINE!!!!
+    """ X_train, X_test, y_train, y_test = train_test_split(X_transformed, y, test_size=0.2, random_state=13)
+    ridge = Ridge(alpha=0.02)
+    ridge.fit(X_train, y_train)
+    w=ridge.coef_
+    y_pred = np.dot(X_test, w) #ridge.predict(X_test)
+    rmse = mean_squared_error(y_test, y_pred, squared=False)
+    print("RMSE w/ ridge: ", rmse) """
+
+     # using ridge and scaling, LOCAL SCORE OF ABOUT 4.5
+    """X_train, X_test, y_train, y_test = train_test_split(X_transformed, y, test_size=0.2, random_state=13)
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    ridge_model = Ridge(alpha=0.1)
+    ridge_model.fit(X_train_scaled, y_train)
+    w=ridge_model.coef_
+    y_pred = np.dot(X_test, w)
+    rmse=mean_squared_error(y_test, y_pred, squared=False)
+    print("RMSE w/ ridge & scaling: ", rmse) """
+
+    # using lasso regression LOCAL SCORE OF ABOUT 6.5
+    """ X_train, X_test, y_train, y_test = train_test_split(X_transformed, y, test_size=0.2, random_state=13)
+    lasso_model = Lasso(alpha=1)
+    lasso_model.fit(X_train, y_train)
+    w = lasso_model.coef_
+    y_pred = np.dot(X_test, w)
+    rmse = mean_squared_error(y_test, y_pred, squared=False)
+    print("RMSE w/ lasso: ", rmse)
+ """
     # End TODO
     assert w.shape == (21,)
     return w
