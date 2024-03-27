@@ -4,6 +4,8 @@
 import numpy as np
 import pandas as pd
 
+from sklearn.impute import SimpleImputer
+
 def data_loading():
     """
     This function loads the training and test data, preprocesses it, removes the NaN values and interpolates the missing 
@@ -18,7 +20,7 @@ def data_loading():
     X_test: matrix of floats: dim = (100, ?), test input with features
     """
     # Load training data
-    train_df = pd.read_csv("train.csv")
+    train_df = pd.read_csv("Task 2\\Data\\train.csv")
     
     print("Training data:")
     print("Shape:", train_df.shape)
@@ -26,7 +28,7 @@ def data_loading():
     print('\n')
     
     # Load test data
-    test_df = pd.read_csv("test.csv")
+    test_df = pd.read_csv("Task 2\\Data\\test.csv")
 
     print("Test data:")
     print(test_df.shape)
@@ -35,11 +37,35 @@ def data_loading():
     # Dummy initialization of the X_train, X_test and y_train
     # TODO: Depending on how you deal with the non-numeric data, you may want to 
     # modify/ignore the initialization of these variables   
-    X_train = np.zeros_like(train_df.drop(['price_CHF'],axis=1))
+    """ X_train = np.zeros_like(train_df.drop(['price_CHF'],axis=1)) #not needed here, since with one-hot encoding for season we have different shapes 
     y_train = np.zeros_like(train_df['price_CHF'])
-    X_test = np.zeros_like(test_df)
+    X_test = np.zeros_like(test_df) """
 
     # TODO: Perform data preprocessing, imputation and extract X_train, y_train and X_test
+
+    # season is not numerical, so the data needs to be assigned differently. 
+    # Here, I use one-hot encoding (might not be the best way of doing this): spring: 100, summer: 010, autumn: 000, winter: 001 i.e. we have now 3 features for season instead of just one
+    train_df = pd.get_dummies(train_df, columns=['season'], drop_first=True)
+    test_df = pd.get_dummies(test_df, columns=['season'], drop_first=True)
+
+    X_array = train_df.values
+     # replace missing data with the mean of the rest of the data
+    imp_train = SimpleImputer(missing_values=np.nan, strategy='mean')
+    imp_train.fit(X_array)
+    X_array = imp_train.transform(X_array)
+    
+    X_train = np.delete(X_array, 1, axis=1) #drop price_CHF
+
+    y_train = X_array[:, 1]
+
+    X_test = test_df.values
+    
+    # replace missing data with the mean of the rest of the data
+    imp_X_test = SimpleImputer(missing_values=np.nan, strategy='mean')
+    imp_X_test.fit(X_test)
+    X_test = imp_X_test.transform(X_test) 
+    
+    # End TODO
 
     assert (X_train.shape[1] == X_test.shape[1]) and (X_train.shape[0] == y_train.shape[0]) and (X_test.shape[0] == 100), "Invalid data shape"
     return X_train, y_train, X_test
@@ -74,6 +100,6 @@ if __name__ == "__main__":
     # Save results in the required format
     dt = pd.DataFrame(y_pred) 
     dt.columns = ['price_CHF']
-    dt.to_csv('results.csv', index=False)
+    dt.to_csv('Task 2\\Jasmin\\results.csv', index=False)
     print("\nResults file successfully generated!")
 
