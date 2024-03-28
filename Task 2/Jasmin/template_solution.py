@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder
 
 def data_loading():
     """
@@ -43,10 +44,16 @@ def data_loading():
 
     # TODO: Perform data preprocessing, imputation and extract X_train, y_train and X_test
 
-    # season is not numerical, so the data needs to be assigned differently. 
-    # Here, I use one-hot encoding (might not be the best way of doing this): spring: 100, summer: 010, autumn: 000, winter: 001 i.e. we have now 3 features for season instead of just one
-    train_df = pd.get_dummies(train_df, columns=['season'], drop_first=True)
-    test_df = pd.get_dummies(test_df, columns=['season'], drop_first=True)
+   
+    #One-hot encoding of season for training data, spring: 0100, summer: 0010, autumn: 1000, winter: 0001
+    X_train_numerical = train_df.select_dtypes(exclude="object") #X_train with only numerical data
+    X_train_nominal = train_df.select_dtypes(include="object") #X_train with only nominal data
+    encoder = OneHotEncoder(sparse=False, handle_unknown="error")
+    X_train_encoded = encoder.fit_transform(X_train_nominal)
+    one_hot_features = pd.DataFrame(X_train_encoded)
+    train_df = X_train_numerical.join(one_hot_features)
+    print("TRAIN_DF W/ ONE-HOT:")
+    print(train_df.head(5))
 
     X_array = train_df.values
      # replace missing data with the mean of the rest of the data
@@ -58,6 +65,15 @@ def data_loading():
 
     y_train = X_array[:, 1]
 
+    # One-hot encoding of season for test-data, spring: 0100, summer: 0010, autumn: 1000, winter: 0001
+    X_test_numerical = test_df.select_dtypes(exclude="object")
+    X_test_nominal = test_df.select_dtypes(include="object")
+    encoder_test = OneHotEncoder(sparse=False, handle_unknown="error")
+    X_test_encoded = encoder_test.fit_transform(X_test_nominal)
+    one_hot_features_test = pd.DataFrame(X_test_encoded)
+    test_df = X_test_numerical.join(one_hot_features_test)
+    print("TEST_DF W/ ONE-HOT:")
+    print(test_df.head(5))
     X_test = test_df.values
     
     # replace missing data with the mean of the rest of the data
