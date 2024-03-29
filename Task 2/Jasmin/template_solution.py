@@ -6,6 +6,10 @@ import pandas as pd
 
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import DotProduct, RBF, Matern, RationalQuadratic, ConstantKernel
+from sklearn.metrics import r2_score
 
 def data_loading():
     """
@@ -52,8 +56,8 @@ def data_loading():
     X_train_encoded = encoder.fit_transform(X_train_nominal)
     one_hot_features = pd.DataFrame(X_train_encoded)
     train_df = X_train_numerical.join(one_hot_features)
-    print("TRAIN_DF W/ ONE-HOT:")
-    print(train_df.head(5))
+    """ print("TRAIN_DF W/ ONE-HOT:")
+    print(train_df.head(5)) """
 
     X_array = train_df.values
      # replace missing data with the mean of the rest of the data
@@ -72,8 +76,8 @@ def data_loading():
     X_test_encoded = encoder_test.fit_transform(X_test_nominal)
     one_hot_features_test = pd.DataFrame(X_test_encoded)
     test_df = X_test_numerical.join(one_hot_features_test)
-    print("TEST_DF W/ ONE-HOT:")
-    print(test_df.head(5))
+    """ print("TEST_DF W/ ONE-HOT:")
+    print(test_df.head(5)) """
     X_test = test_df.values
     
     # replace missing data with the mean of the rest of the data
@@ -103,6 +107,37 @@ def modeling_and_prediction(X_train, y_train, X_test):
 
     y_pred=np.zeros(X_test.shape[0])
     #TODO: Define the model and fit it using training data. Then, use test data to make predictions
+
+    X_train_train, X_train_test, y_train_train, y_train_test = train_test_split(X_train, y_train, test_size=0.2, random_state=13)
+    kernel = ConstantKernel(constant_value=3) * RBF(length_scale=1, length_scale_bounds=(1e-2, 1e2))
+    gp = GaussianProcessRegressor(kernel=kernel, alpha=1, n_restarts_optimizer=10)
+    gp.fit(X_train_train, y_train_train)
+    y_train_test_predict = gp.predict(X_train_test)
+    localScore = r2_score(y_train_test, y_train_test_predict)#, squared=False)
+    print("LOCAL SCORE:")
+    print(localScore)
+
+    locScoreCalc = 0.0
+    zähler = 0.0
+    nenner = 0.0
+    mean = np.mean(y_train_test)
+    N = len(y_train_test)
+    for i in range (N):
+        interim = y_train_test[i] - y_train_test_predict[i]
+        interim = interim ** 2
+        zähler += interim
+    for i in range (N):
+        interim = y_train_test[i] - mean
+        interim = interim ** 2
+        nenner += interim
+    
+    locScoreCalc = 1 - (zähler / nenner)
+    print("SCORE CALCULATED:")
+    print(locScoreCalc)
+
+    y_pred = gp.predict(X_test)
+
+    #End TODO
 
     assert y_pred.shape == (100,), "Invalid data shape"
     return y_pred
