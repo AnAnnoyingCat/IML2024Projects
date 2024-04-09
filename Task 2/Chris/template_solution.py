@@ -88,6 +88,21 @@ def modeling_and_prediction(X_train, y_train, X_test):
     assert y_pred.shape == (100,), "Invalid data shape"
     return y_pred
 
+# Main function. You don't have to change this
+if __name__ == "__main__":
+    generate_missing_values_files()
+    # Data loading
+    X_train, y_train, X_test = data_loading()
+    # The function retrieving optimal LR parameters
+    y_pred=modeling_and_prediction(X_train, y_train, X_test)
+    # Save results in the required format
+    dt = pd.DataFrame(y_pred) 
+    dt.columns = ['price_CHF']
+    dt.to_csv('Task 2/Chris/results.csv', index=False)
+    print("\nResults file successfully generated!")
+    
+
+"""
 def generate_missing_values_files():
     # Import data and onehot-encode seasons
     train_df = pd.read_csv("Task 2\\Data\\train.csv")
@@ -100,8 +115,8 @@ def generate_missing_values_files():
     oneHotSeasons = enc.fit_transform(season_column)
     onehot_seasons_df = pd.DataFrame(oneHotSeasons,  columns=enc.get_feature_names_out(['season']))
     print(onehot_seasons_df)
+
     # Univariante
-    """
     ##Avg_colwise
     imp = SimpleImputer(missing_values=np.nan, strategy='mean')
     avg_data = imp.fit_transform(train_df_price_values)
@@ -139,25 +154,12 @@ def generate_missing_values_files():
     avg_data_df = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
     full_data = pd.concat([onehot_seasons_df, avg_data_df], axis=1)
     full_data.to_csv("Task 2/Data/filled_in_data_iterimp.csv", index=False)
-    """
+
     # KNN
+    
     imp = KNNImputer(n_neighbors=4,weights='uniform')
     avg_data = imp.fit_transform(train_df_price_values)
     avg_data_df = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
     full_data = pd.concat([onehot_seasons_df, avg_data_df], axis=1)
     full_data.to_csv("Task 2/Data/filled_in_data_knn.csv", index=False)
-
-# Main function. You don't have to change this
-if __name__ == "__main__":
-    generate_missing_values_files()
-    # Data loading
-    X_train, y_train, X_test = data_loading()
-    # The function retrieving optimal LR parameters
-    y_pred=modeling_and_prediction(X_train, y_train, X_test)
-    # Save results in the required format
-    dt = pd.DataFrame(y_pred) 
-    dt.columns = ['price_CHF']
-    dt.to_csv('Task 2/Chris/results.csv', index=False)
-    print("\nResults file successfully generated!")
-    
-
+"""
