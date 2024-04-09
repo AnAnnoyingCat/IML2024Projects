@@ -3,6 +3,18 @@
 # First, we import necessary libraries:
 import numpy as np
 import pandas as pd
+from sklearn import preprocessing
+import seaborn as sb
+from sklearn.impute import SimpleImputer
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+from sklearn.impute import KNNImputer
+
+"""
+The plan:
+Model non-numeric data as one hot columns. Generate different files using different methods of filling in the missing data.
+Perform cross validation of kernels on all of them, select the best model and train that.
+"""
 
 def data_loading():
     """
@@ -18,7 +30,7 @@ def data_loading():
     X_test: matrix of floats: dim = (100, ?), test input with features
     """
     # Load training data
-    train_df = pd.read_csv("train.csv")
+    train_df = pd.read_csv("Task 2\\Data\\train.csv")
     
     print("Training data:")
     print("Shape:", train_df.shape)
@@ -26,21 +38,32 @@ def data_loading():
     print('\n')
     
     # Load test data
-    test_df = pd.read_csv("test.csv")
+    test_df = pd.read_csv("Task 2\\Data\\test.csv")
 
     print("Test data:")
     print(test_df.shape)
     print(test_df.head(2))
+    
+    # Encode seasons of training data
+    season_column = train_df[['season']]
+    seasons = ['spring', 'summer', 'autumn', 'winter']
+    enc = preprocessing.OneHotEncoder(categories=[seasons], sparse=False)
+    oneHotSeasons = enc.fit_transform(season_column)
+    onehot_seasons_df = pd.DataFrame(oneHotSeasons,  columns=enc.get_feature_names_out(['season']))
+    X_train = pd.concat([onehot_seasons_df,train_df.drop(['price_CHF', 'season'],axis=1)], axis=1)
 
-    # Dummy initialization of the X_train, X_test and y_train
-    # TODO: Depending on how you deal with the non-numeric data, you may want to 
-    # modify/ignore the initialization of these variables   
-    X_train = np.zeros_like(train_df.drop(['price_CHF'],axis=1))
-    y_train = np.zeros_like(train_df['price_CHF'])
-    X_test = np.zeros_like(test_df)
+    # Extract traning y
+    y_train = train_df[['price_CHF']]
 
-    # TODO: Perform data preprocessing, imputation and extract X_train, y_train and X_test
-
+    # Encode seasons of testing data
+    season_column = test_df[['season']]
+    oneHotSeasons = enc.fit_transform(season_column)
+    onehot_seasons_df = pd.DataFrame(oneHotSeasons,  columns=enc.get_feature_names_out(['season']))
+    X_test = pd.concat([onehot_seasons_df,test_df.drop(['season'],axis=1)], axis=1)
+    print(X_train)
+    print(y_train)
+    print(X_test)
+    
     assert (X_train.shape[1] == X_test.shape[1]) and (X_train.shape[0] == y_train.shape[0]) and (X_test.shape[0] == 100), "Invalid data shape"
     return X_train, y_train, X_test
 
@@ -65,8 +88,68 @@ def modeling_and_prediction(X_train, y_train, X_test):
     assert y_pred.shape == (100,), "Invalid data shape"
     return y_pred
 
+def generate_missing_values_files():
+    # Import data and onehot-encode seasons
+    train_df = pd.read_csv("Task 2\\Data\\train.csv")
+    train_df_price_values = train_df.drop(['season'], axis=1)
+
+    # Split off and handle the seasons
+    season_column = train_df[['season']]
+    seasons = ['spring', 'summer', 'autumn', 'winter']
+    enc = preprocessing.OneHotEncoder(categories=[seasons], sparse=False)
+    oneHotSeasons = enc.fit_transform(season_column)
+    onehot_seasons_df = pd.DataFrame(oneHotSeasons,  columns=enc.get_feature_names_out(['season']))
+    print(onehot_seasons_df)
+    # Univariante
+    """
+    ##Avg_colwise
+    imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+    avg_data = imp.fit_transform(train_df_price_values)
+    avg_data_df1 = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df,avg_data_df1], axis=1)
+    full_data.to_csv("Task 2/Data/filled_in_data_avg_colwise.csv", index=False)
+
+    ##Median_colwise
+    imp = SimpleImputer(missing_values=np.nan, strategy='median')
+    avg_data = imp.fit_transform(train_df_price_values)
+    avg_data_df2 = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df,avg_data_df2], axis=1)
+    full_data.to_csv("Task 2/Data/filled_in_data_median_colwise.csv", index=False)
+
+    ##Avg_rowwise
+    # Hypothesis: prices between countries are correlated, so this might work.
+    imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+    avg_data = imp.fit_transform(train_df_price_values.transpose())
+    avg_data_df3 = pd.DataFrame(avg_data.transpose(), columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df,avg_data_df3], axis=1)
+    full_data.to_csv("Task 2/Data/filled_in_data_avg_rowwise.csv", index=False)
+
+    ##Median_rowwise
+    imp = SimpleImputer(missing_values=np.nan, strategy='median')
+    avg_data = imp.fit_transform(train_df_price_values.transpose())
+    avg_data_df4 = pd.DataFrame(avg_data.transpose(), columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df,avg_data_df4], axis=1)
+    full_data.to_csv("Task 2/Data/filled_in_data_median_rowwise.csv", index=False)
+
+    # Multivariante
+    ## Iterative Imputer
+
+    imp = IterativeImputer(max_iter=126, random_state=13)
+    avg_data = imp.fit_transform(train_df_price_values)
+    avg_data_df = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df, avg_data_df], axis=1)
+    full_data.to_csv("Task 2/Data/filled_in_data_iterimp.csv", index=False)
+    """
+    # KNN
+    imp = KNNImputer(n_neighbors=4,weights='uniform')
+    avg_data = imp.fit_transform(train_df_price_values)
+    avg_data_df = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df, avg_data_df], axis=1)
+    full_data.to_csv("Task 2/Data/filled_in_data_knn.csv", index=False)
+
 # Main function. You don't have to change this
 if __name__ == "__main__":
+    generate_missing_values_files()
     # Data loading
     X_train, y_train, X_test = data_loading()
     # The function retrieving optimal LR parameters
@@ -74,6 +157,7 @@ if __name__ == "__main__":
     # Save results in the required format
     dt = pd.DataFrame(y_pred) 
     dt.columns = ['price_CHF']
-    dt.to_csv('results.csv', index=False)
+    dt.to_csv('Task 2/Chris/results.csv', index=False)
     print("\nResults file successfully generated!")
+    
 
