@@ -10,6 +10,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import DotProduct, RBF, Matern, RationalQuadratic, ConstantKernel
 from sklearn.metrics import r2_score
+from sklearn.model_selection import cross_val_predict
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+from sklearn.impute import KNNImputer
 
 def data_loading():
     """
@@ -84,6 +88,8 @@ def data_loading():
     imp_X_test = SimpleImputer(missing_values=np.nan, strategy='mean')
     imp_X_test.fit(X_test)
     X_test = imp_X_test.transform(X_test) 
+    """ print("X_TEST IMPUTED:")
+    print(X_test[:5]) """
     
     # End TODO
 
@@ -108,16 +114,35 @@ def modeling_and_prediction(X_train, y_train, X_test):
     y_pred=np.zeros(X_test.shape[0])
     #TODO: Define the model and fit it using training data. Then, use test data to make predictions
 
-    X_train_train, X_train_test, y_train_train, y_train_test = train_test_split(X_train, y_train, test_size=0.2, random_state=13)
+    # Gaussian Process Regression with RBF kernel
+    # Gives local score of ca. 0.65 but public score of -0.5
+    """ X_train_train, X_train_test, y_train_train, y_train_test = train_test_split(X_train, y_train, test_size=0.2, random_state=13)
     kernel = ConstantKernel(constant_value=3) * RBF(length_scale=1, length_scale_bounds=(1e-2, 1e2))
     gp = GaussianProcessRegressor(kernel=kernel, alpha=1, n_restarts_optimizer=10)
     gp.fit(X_train_train, y_train_train)
     y_train_test_predict = gp.predict(X_train_test)
     localScore = r2_score(y_train_test, y_train_test_predict)#, squared=False)
     print("LOCAL SCORE:")
-    print(localScore)
+    print(localScore) """
+    
+    # Define the Gaussian Process Regressor model
+    kernel = ConstantKernel(constant_value=3) * RBF(length_scale=1, length_scale_bounds=(1e-2, 1e2))
+    gp = GaussianProcessRegressor(kernel=kernel, alpha=1, n_restarts_optimizer=10)
 
-    locScoreCalc = 0.0
+    # Use cross-validation to make predictions on the training data
+    y_train_cv_predict = cross_val_predict(gp, X_train, y_train, cv=5)  # 5-fold cross-validation
+
+    # Fit the model on the entire training data
+    gp.fit(X_train, y_train)
+
+    # Calculate the R^2 score using the predictions from cross-validation
+    cv_score = r2_score(y_train, y_train_cv_predict)
+    print("Cross-validation R^2 score:", cv_score)
+
+    
+
+    # calculated r2 score from scratch to see if it differs from r2_score (it doesn't)
+    """ locScoreCalc = 0.0
     zähler = 0.0
     nenner = 0.0
     mean = np.mean(y_train_test)
@@ -133,7 +158,7 @@ def modeling_and_prediction(X_train, y_train, X_test):
     
     locScoreCalc = 1 - (zähler / nenner)
     print("SCORE CALCULATED:")
-    print(locScoreCalc)
+    print(locScoreCalc) """
 
     y_pred = gp.predict(X_test)
 
@@ -142,15 +167,106 @@ def modeling_and_prediction(X_train, y_train, X_test):
     assert y_pred.shape == (100,), "Invalid data shape"
     return y_pred
 
+# exactly the same as in chris template, but for test.csv
+def generate_missing_values_files():
+    # Import data and onehot-encode seasons
+    train_df = pd.read_csv("Task 2\\Data\\test.csv")
+    train_df_price_values = train_df.drop(['season'], axis=1)
+
+    # Split off and handle the seasons
+    season_column = train_df[['season']]
+    seasons = ['spring', 'summer', 'autumn', 'winter']
+    enc = OneHotEncoder(categories=[seasons], sparse=False)
+    oneHotSeasons = enc.fit_transform(season_column)
+    onehot_seasons_df = pd.DataFrame(oneHotSeasons,  columns=enc.get_feature_names_out(['season']))
+    print(onehot_seasons_df)
+
+    # Univariante
+    ##Avg_colwise
+    imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+    avg_data = imp.fit_transform(train_df_price_values)
+    avg_data_df1 = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df,avg_data_df1], axis=1)
+    full_data.to_csv("Task 2/Data/test_filled_in_data_avg_colwise.csv", index=False)
+
+    ##Median_colwise
+    imp = SimpleImputer(missing_values=np.nan, strategy='median')
+    avg_data = imp.fit_transform(train_df_price_values)
+    avg_data_df2 = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df,avg_data_df2], axis=1)
+    full_data.to_csv("Task 2/Data/test_filled_in_data_median_colwise.csv", index=False)
+
+    ##Avg_rowwise
+    # Hypothesis: prices between countries are correlated, so this might work.
+    imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+    avg_data = imp.fit_transform(train_df_price_values.transpose())
+    avg_data_df3 = pd.DataFrame(avg_data.transpose(), columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df,avg_data_df3], axis=1)
+    full_data.to_csv("Task 2/Data/test_filled_in_data_avg_rowwise.csv", index=False)
+
+    ##Median_rowwise
+    imp = SimpleImputer(missing_values=np.nan, strategy='median')
+    avg_data = imp.fit_transform(train_df_price_values.transpose())
+    avg_data_df4 = pd.DataFrame(avg_data.transpose(), columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df,avg_data_df4], axis=1)
+    full_data.to_csv("Task 2/Data/test_filled_in_data_median_rowwise.csv", index=False)
+
+    # Multivariante
+    ## Iterative Imputer
+
+    imp = IterativeImputer(max_iter=126, random_state=13)
+    avg_data = imp.fit_transform(train_df_price_values)
+    avg_data_df = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df, avg_data_df], axis=1)
+    full_data.to_csv("Task 2/Data/test_filled_in_data_iterimp.csv", index=False)
+
+    # KNN
+    
+    imp = KNNImputer(n_neighbors=4,weights='uniform')
+    avg_data = imp.fit_transform(train_df_price_values)
+    avg_data_df = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df, avg_data_df], axis=1)
+    full_data.to_csv("Task 2/Data/test_filled_in_data_knn.csv", index=False)
+
+def defineXY(file):
+    df = pd.read_csv("{0}".format(file))
+    X = df.drop(['price_CHF'], axis=1)
+    y = df['price_CHF']
+    return X.values, y.values
+
 # Main function. You don't have to change this
 if __name__ == "__main__":
+    generate_missing_values_files()
     # Data loading
-    X_train, y_train, X_test = data_loading()
+    """ X_train, y_train, X_test = data_loading()
     # The function retrieving optimal LR parameters
-    y_pred=modeling_and_prediction(X_train, y_train, X_test)
+    
+    # J - use chris csv file for different kind of data preprocessing
+    y_pred=modeling_and_prediction(X_train, y_train, X_test) # my own preprocessing
+    
+    X_train, y_train = defineXY("Task 2\\Data\\filled_in_data_avg_colwise.csv")
+    y_pred=modeling_and_prediction(X_train, y_train, X_test) # avg colwise
+    
+    X_train, y_train = defineXY("Task 2\\Data\\filled_in_data_avg_rowwise.csv")
+    y_pred=modeling_and_prediction(X_train, y_train, X_test) # avg rowwise
+    
+    X_train, y_train = defineXY("Task 2\\Data\\filled_in_data_median_colwise.csv")
+    y_pred=modeling_and_prediction(X_train, y_train, X_test) # median colwise
+    
+    X_train, y_train = defineXY("Task 2\\Data\\filled_in_data_median_rowwise.csv")
+    y_pred=modeling_and_prediction(X_train, y_train, X_test) # median rowwise
+    
+    X_train, y_train = defineXY("Task 2\\Data\\filled_in_data_iterimp.csv")
+    y_pred=modeling_and_prediction(X_train, y_train, X_test) # iterative imputer
+    
+    X_train, y_train = defineXY("Task 2\\Data\\filled_in_data_knn.csv")
+    y_pred=modeling_and_prediction(X_train, y_train, X_test) # knn imputer
+    
     # Save results in the required format
     dt = pd.DataFrame(y_pred) 
     dt.columns = ['price_CHF']
-    dt.to_csv('Task 2\\Jasmin\\results.csv', index=False)
+    dt.to_csv('Task 2\\Jasmin\\results.csv', index=False)"""
     print("\nResults file successfully generated!")
+
+
 
