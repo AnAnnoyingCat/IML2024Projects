@@ -116,16 +116,16 @@ def modeling_and_prediction(X_train, y_train, X_test):
 
     # Gaussian Process Regression with RBF kernel
     # Gives local score of ca. 0.65 but public score of -0.5
-    """ X_train_train, X_train_test, y_train_train, y_train_test = train_test_split(X_train, y_train, test_size=0.2, random_state=13)
+    X_train_train, X_train_test, y_train_train, y_train_test = train_test_split(X_train, y_train, test_size=0.2, random_state=13)
     kernel = ConstantKernel(constant_value=3) * RBF(length_scale=1, length_scale_bounds=(1e-2, 1e2))
     gp = GaussianProcessRegressor(kernel=kernel, alpha=1, n_restarts_optimizer=10)
     gp.fit(X_train_train, y_train_train)
     y_train_test_predict = gp.predict(X_train_test)
     localScore = r2_score(y_train_test, y_train_test_predict)#, squared=False)
     print("LOCAL SCORE:")
-    print(localScore) """
+    print(localScore)
     
-    # Define the Gaussian Process Regressor model
+    """ # Define the Gaussian Process Regressor model
     kernel = ConstantKernel(constant_value=3) * RBF(length_scale=1, length_scale_bounds=(1e-2, 1e2))
     gp = GaussianProcessRegressor(kernel=kernel, alpha=1, n_restarts_optimizer=10)
 
@@ -137,7 +137,7 @@ def modeling_and_prediction(X_train, y_train, X_test):
 
     # Calculate the R^2 score using the predictions from cross-validation
     cv_score = r2_score(y_train, y_train_cv_predict)
-    print("Cross-validation R^2 score:", cv_score)
+    print("Cross-validation R^2 score:", cv_score) """
 
     
 
@@ -167,7 +167,80 @@ def modeling_and_prediction(X_train, y_train, X_test):
     assert y_pred.shape == (100,), "Invalid data shape"
     return y_pred
 
-# exactly the same as in chris template, but for test.csv
+
+def defineXY(file_train, file_test):
+    df_train = pd.read_csv("{0}".format(file_train))
+    X_train = df_train.drop(['price_CHF'], axis=1)
+    y = df_train['price_CHF']
+    df_test = pd.read_csv("{0}".format(file_test))
+    return X_train.values, y.values, df_test.values
+
+# Main function. You don't have to change this
+if __name__ == "__main__":
+    #generate_missing_values_files()
+    # Data loading
+    X_train, y_train, X_test = data_loading()
+    # The function retrieving optimal LR parameters
+    
+    # J - use chris csv file for different kind of data preprocessing
+    y_pred=modeling_and_prediction(X_train, y_train, X_test) # my own preprocessing
+    # Save results in the required format
+    dt = pd.DataFrame(y_pred) 
+    dt.columns = ['price_CHF']
+    dt.to_csv('Task 2\\Jasmin\\results.csv', index=False)
+    print("\nResults file successfully generated!")
+    
+    X_train, y_train, X_test = defineXY("Task 2\\Data\\filled_in_data_avg_colwise.csv", "Task 2\\Data\\test_filled_in_data_avg_colwise.csv")
+    y_pred=modeling_and_prediction(X_train, y_train, X_test) # avg colwise
+    # Save results in the required format
+    dt = pd.DataFrame(y_pred) 
+    dt.columns = ['price_CHF']
+    dt.to_csv('Task 2\\Jasmin\\results_avg_colwise.csv', index=False)
+    print("\nResults file successfully generated!")
+    
+    X_train, y_train, X_test = defineXY("Task 2\\Data\\filled_in_data_avg_rowwise.csv", "Task 2\\Data\\test_filled_in_data_avg_rowwise.csv")
+    y_pred=modeling_and_prediction(X_train, y_train, X_test) # avg rowwise
+    # Save results in the required format
+    dt = pd.DataFrame(y_pred) 
+    dt.columns = ['price_CHF']
+    dt.to_csv('Task 2\\Jasmin\\results_avg_rowwise.csv', index=False)
+    print("\nResults file successfully generated!")
+    
+    X_train, y_train, X_test = defineXY("Task 2\\Data\\filled_in_data_median_colwise.csv", "Task 2\\Data\\test_filled_in_data_median_colwise.csv")
+    y_pred=modeling_and_prediction(X_train, y_train, X_test) # median colwise
+    # Save results in the required format
+    dt = pd.DataFrame(y_pred) 
+    dt.columns = ['price_CHF']
+    dt.to_csv('Task 2\\Jasmin\\results_median_colwise.csv', index=False)
+    print("\nResults file successfully generated!")
+    
+    X_train, y_train, X_test = defineXY("Task 2\\Data\\filled_in_data_median_rowwise.csv", "Task 2\\Data\\test_filled_in_data_median_rowwise.csv")
+    y_pred=modeling_and_prediction(X_train, y_train, X_test) # median rowwise
+    # Save results in the required format
+    dt = pd.DataFrame(y_pred) 
+    dt.columns = ['price_CHF']
+    dt.to_csv('Task 2\\Jasmin\\results_median_rowwise.csv', index=False)
+    print("\nResults file successfully generated!")
+    
+    X_train, y_train, X_test = defineXY("Task 2\\Data\\filled_in_data_iterimp.csv", "Task 2\\Data\\test_filled_in_data_iterimp.csv")
+    y_pred=modeling_and_prediction(X_train, y_train, X_test) # iterative imputer
+    # Save results in the required format
+    dt = pd.DataFrame(y_pred) 
+    dt.columns = ['price_CHF']
+    dt.to_csv('Task 2\\Jasmin\\results_iterimp.csv', index=False)
+    print("\nResults file successfully generated!")
+    
+    X_train, y_train, X_test = defineXY("Task 2\\Data\\filled_in_data_knn.csv", "Task 2\\Data\\test_filled_in_data_knn.csv")
+    y_pred=modeling_and_prediction(X_train, y_train, X_test) # knn imputer
+    # Save results in the required format
+    dt = pd.DataFrame(y_pred) 
+    dt.columns = ['price_CHF']
+    dt.to_csv('Task 2\\Jasmin\\results_knn.csv', index=False)
+    print("\nResults file successfully generated!")
+    
+    
+    
+    """ # exactly the same as in chris template, but for test.csv
 def generate_missing_values_files():
     # Import data and onehot-encode seasons
     train_df = pd.read_csv("Task 2\\Data\\test.csv")
@@ -226,47 +299,8 @@ def generate_missing_values_files():
     avg_data = imp.fit_transform(train_df_price_values)
     avg_data_df = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
     full_data = pd.concat([onehot_seasons_df, avg_data_df], axis=1)
-    full_data.to_csv("Task 2/Data/test_filled_in_data_knn.csv", index=False)
+    full_data.to_csv("Task 2/Data/test_filled_in_data_knn.csv", index=False) """
 
-def defineXY(file):
-    df = pd.read_csv("{0}".format(file))
-    X = df.drop(['price_CHF'], axis=1)
-    y = df['price_CHF']
-    return X.values, y.values
-
-# Main function. You don't have to change this
-if __name__ == "__main__":
-    generate_missing_values_files()
-    # Data loading
-    """ X_train, y_train, X_test = data_loading()
-    # The function retrieving optimal LR parameters
-    
-    # J - use chris csv file for different kind of data preprocessing
-    y_pred=modeling_and_prediction(X_train, y_train, X_test) # my own preprocessing
-    
-    X_train, y_train = defineXY("Task 2\\Data\\filled_in_data_avg_colwise.csv")
-    y_pred=modeling_and_prediction(X_train, y_train, X_test) # avg colwise
-    
-    X_train, y_train = defineXY("Task 2\\Data\\filled_in_data_avg_rowwise.csv")
-    y_pred=modeling_and_prediction(X_train, y_train, X_test) # avg rowwise
-    
-    X_train, y_train = defineXY("Task 2\\Data\\filled_in_data_median_colwise.csv")
-    y_pred=modeling_and_prediction(X_train, y_train, X_test) # median colwise
-    
-    X_train, y_train = defineXY("Task 2\\Data\\filled_in_data_median_rowwise.csv")
-    y_pred=modeling_and_prediction(X_train, y_train, X_test) # median rowwise
-    
-    X_train, y_train = defineXY("Task 2\\Data\\filled_in_data_iterimp.csv")
-    y_pred=modeling_and_prediction(X_train, y_train, X_test) # iterative imputer
-    
-    X_train, y_train = defineXY("Task 2\\Data\\filled_in_data_knn.csv")
-    y_pred=modeling_and_prediction(X_train, y_train, X_test) # knn imputer
-    
-    # Save results in the required format
-    dt = pd.DataFrame(y_pred) 
-    dt.columns = ['price_CHF']
-    dt.to_csv('Task 2\\Jasmin\\results.csv', index=False)"""
-    print("\nResults file successfully generated!")
 
 
 
