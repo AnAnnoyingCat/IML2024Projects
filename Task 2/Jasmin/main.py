@@ -125,6 +125,7 @@ def modeling_and_prediction(X_train, y_train, X_test):
     print("LOCAL SCORE:")
     print(localScore)
     
+    # w/ cross-validation
     """ # Define the Gaussian Process Regressor model
     kernel = ConstantKernel(constant_value=3) * RBF(length_scale=1, length_scale_bounds=(1e-2, 1e2))
     gp = GaussianProcessRegressor(kernel=kernel, alpha=1, n_restarts_optimizer=10)
@@ -167,6 +168,90 @@ def modeling_and_prediction(X_train, y_train, X_test):
     assert y_pred.shape == (100,), "Invalid data shape"
     return y_pred
 
+ # exactly the same as in chris template, but for test.csv
+def generate_missing_values_files():
+    ############ train data ############
+    
+    # Import data and onehot-encode seasons
+    train_df = pd.read_csv("Task 2\\Data\\train.csv")
+    train_df_price_values = train_df.drop(['season'], axis=1)
+
+    # Split off and handle the seasons
+    season_column = train_df[['season']]
+    seasons = ['spring', 'summer', 'autumn', 'winter']
+    enc = OneHotEncoder(categories=[seasons], sparse=False)
+    oneHotSeasons = enc.fit_transform(season_column)
+    onehot_seasons_df = pd.DataFrame(oneHotSeasons,  columns=enc.get_feature_names_out(['season']))
+    print(onehot_seasons_df)
+    
+     # KNN Imputer
+    imp = KNNImputer(n_neighbors=4,weights='uniform')
+    avg_data = imp.fit_transform(train_df_price_values)
+    avg_data_df = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df, avg_data_df], axis=1)
+    full_data.to_csv("Task 2/Data/filled_in_data_knn.csv", index=False)
+
+    ############## test data ##############
+    
+    train_df = pd.read_csv("Task 2\\Data\\test.csv")
+    train_df_price_values = train_df.drop(['season'], axis=1)
+
+    # Split off and handle the seasons
+    season_column = train_df[['season']]
+    seasons = ['spring', 'summer', 'autumn', 'winter']
+    enc = OneHotEncoder(categories=[seasons], sparse=False)
+    oneHotSeasons = enc.fit_transform(season_column)
+    onehot_seasons_df = pd.DataFrame(oneHotSeasons,  columns=enc.get_feature_names_out(['season']))
+    print(onehot_seasons_df)
+    
+     # KNN Imputer
+    imp = KNNImputer(n_neighbors=4,weights='uniform')
+    avg_data = imp.fit_transform(train_df_price_values)
+    avg_data_df = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df, avg_data_df], axis=1)
+    full_data.to_csv("Task 2/Data/test_filled_in_data_knn.csv", index=False)
+
+    """ # Univariante
+    ##Avg_colwise
+    imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+    avg_data = imp.fit_transform(train_df_price_values)
+    avg_data_df1 = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df,avg_data_df1], axis=1)
+    full_data.to_csv("Task 2/Data/test_filled_in_data_avg_colwise.csv", index=False)
+
+    ##Median_colwise
+    imp = SimpleImputer(missing_values=np.nan, strategy='median')
+    avg_data = imp.fit_transform(train_df_price_values)
+    avg_data_df2 = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df,avg_data_df2], axis=1)
+    full_data.to_csv("Task 2/Data/test_filled_in_data_median_colwise.csv", index=False)
+
+    ##Avg_rowwise
+    # Hypothesis: prices between countries are correlated, so this might work.
+    imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+    avg_data = imp.fit_transform(train_df_price_values.transpose())
+    avg_data_df3 = pd.DataFrame(avg_data.transpose(), columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df,avg_data_df3], axis=1)
+    full_data.to_csv("Task 2/Data/test_filled_in_data_avg_rowwise.csv", index=False)
+
+    ##Median_rowwise
+    imp = SimpleImputer(missing_values=np.nan, strategy='median')
+    avg_data = imp.fit_transform(train_df_price_values.transpose())
+    avg_data_df4 = pd.DataFrame(avg_data.transpose(), columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df,avg_data_df4], axis=1)
+    full_data.to_csv("Task 2/Data/test_filled_in_data_median_rowwise.csv", index=False)
+
+    # Multivariante
+    ## Iterative Imputer
+
+    imp = IterativeImputer(max_iter=126, random_state=13)
+    avg_data = imp.fit_transform(train_df_price_values)
+    avg_data_df = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
+    full_data = pd.concat([onehot_seasons_df, avg_data_df], axis=1)
+    full_data.to_csv("Task 2/Data/test_filled_in_data_iterimp.csv", index=False) """
+
+
+
 
 def defineXY(file_train, file_test):
     df_train = pd.read_csv("{0}".format(file_train))
@@ -179,11 +264,11 @@ def defineXY(file_train, file_test):
 if __name__ == "__main__":
     #generate_missing_values_files()
     # Data loading
-    X_train, y_train, X_test = data_loading()
+    #X_train, y_train, X_test = data_loading()
     # The function retrieving optimal LR parameters
     
     # J - use chris csv file for different kind of data preprocessing
-    y_pred=modeling_and_prediction(X_train, y_train, X_test) # my own preprocessing
+    """ y_pred=modeling_and_prediction(X_train, y_train, X_test) # my own preprocessing
     # Save results in the required format
     dt = pd.DataFrame(y_pred) 
     dt.columns = ['price_CHF']
@@ -229,7 +314,8 @@ if __name__ == "__main__":
     dt.columns = ['price_CHF']
     dt.to_csv('Task 2\\Jasmin\\results_iterimp.csv', index=False)
     print("\nResults file successfully generated!")
-    
+     """
+    generate_missing_values_files()
     X_train, y_train, X_test = defineXY("Task 2\\Data\\filled_in_data_knn.csv", "Task 2\\Data\\test_filled_in_data_knn.csv")
     y_pred=modeling_and_prediction(X_train, y_train, X_test) # knn imputer
     # Save results in the required format
@@ -240,67 +326,4 @@ if __name__ == "__main__":
     
     
     
-    """ # exactly the same as in chris template, but for test.csv
-def generate_missing_values_files():
-    # Import data and onehot-encode seasons
-    train_df = pd.read_csv("Task 2\\Data\\test.csv")
-    train_df_price_values = train_df.drop(['season'], axis=1)
-
-    # Split off and handle the seasons
-    season_column = train_df[['season']]
-    seasons = ['spring', 'summer', 'autumn', 'winter']
-    enc = OneHotEncoder(categories=[seasons], sparse=False)
-    oneHotSeasons = enc.fit_transform(season_column)
-    onehot_seasons_df = pd.DataFrame(oneHotSeasons,  columns=enc.get_feature_names_out(['season']))
-    print(onehot_seasons_df)
-
-    # Univariante
-    ##Avg_colwise
-    imp = SimpleImputer(missing_values=np.nan, strategy='mean')
-    avg_data = imp.fit_transform(train_df_price_values)
-    avg_data_df1 = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
-    full_data = pd.concat([onehot_seasons_df,avg_data_df1], axis=1)
-    full_data.to_csv("Task 2/Data/test_filled_in_data_avg_colwise.csv", index=False)
-
-    ##Median_colwise
-    imp = SimpleImputer(missing_values=np.nan, strategy='median')
-    avg_data = imp.fit_transform(train_df_price_values)
-    avg_data_df2 = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
-    full_data = pd.concat([onehot_seasons_df,avg_data_df2], axis=1)
-    full_data.to_csv("Task 2/Data/test_filled_in_data_median_colwise.csv", index=False)
-
-    ##Avg_rowwise
-    # Hypothesis: prices between countries are correlated, so this might work.
-    imp = SimpleImputer(missing_values=np.nan, strategy='mean')
-    avg_data = imp.fit_transform(train_df_price_values.transpose())
-    avg_data_df3 = pd.DataFrame(avg_data.transpose(), columns=train_df_price_values.columns)
-    full_data = pd.concat([onehot_seasons_df,avg_data_df3], axis=1)
-    full_data.to_csv("Task 2/Data/test_filled_in_data_avg_rowwise.csv", index=False)
-
-    ##Median_rowwise
-    imp = SimpleImputer(missing_values=np.nan, strategy='median')
-    avg_data = imp.fit_transform(train_df_price_values.transpose())
-    avg_data_df4 = pd.DataFrame(avg_data.transpose(), columns=train_df_price_values.columns)
-    full_data = pd.concat([onehot_seasons_df,avg_data_df4], axis=1)
-    full_data.to_csv("Task 2/Data/test_filled_in_data_median_rowwise.csv", index=False)
-
-    # Multivariante
-    ## Iterative Imputer
-
-    imp = IterativeImputer(max_iter=126, random_state=13)
-    avg_data = imp.fit_transform(train_df_price_values)
-    avg_data_df = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
-    full_data = pd.concat([onehot_seasons_df, avg_data_df], axis=1)
-    full_data.to_csv("Task 2/Data/test_filled_in_data_iterimp.csv", index=False)
-
-    # KNN
     
-    imp = KNNImputer(n_neighbors=4,weights='uniform')
-    avg_data = imp.fit_transform(train_df_price_values)
-    avg_data_df = pd.DataFrame(avg_data, columns=train_df_price_values.columns)
-    full_data = pd.concat([onehot_seasons_df, avg_data_df], axis=1)
-    full_data.to_csv("Task 2/Data/test_filled_in_data_knn.csv", index=False) """
-
-
-
-
