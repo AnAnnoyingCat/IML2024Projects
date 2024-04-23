@@ -29,13 +29,13 @@ def generate_embeddings():
     # See https://pytorch.org/vision/stable/models.html#using-the-pre-trained-models
     train_transforms = transforms.Compose([transforms.ToTensor()])
 
-    train_dataset = datasets.ImageFolder(root="dataset/", transform=train_transforms)
+    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=train_transforms)
     # Hint: adjust batch_size and num_workers to your PC configuration, so that you don't 
     # run out of memory (VRAM if on GPU, RAM if on CPU)
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=64,
                               shuffle=False,
-                              pin_memory=True, num_workers=16)
+                              pin_memory=True, num_workers=12Task 3/Chris/embeddings.npy)
 
     # TODO: define a model for extraction of the embeddings (Hint: load a pretrained model,
     #  more info here: https://pytorch.org/vision/stable/models.html)
@@ -48,7 +48,7 @@ def generate_embeddings():
     # TODO: Use the model to extract the embeddings. Hint: remove the last layers of the 
     # model to access the embeddings the model generates. 
 
-    np.save('dataset/embeddings.npy', embeddings)
+    np.save('Task 3/Chris/embeddings.npy', embeddings)
 
 
 def get_data(file, train=True):
@@ -67,10 +67,10 @@ def get_data(file, train=True):
             triplets.append(line)
 
     # generate training data from triplets
-    train_dataset = datasets.ImageFolder(root="dataset/",
+    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/",
                                          transform=None)
     filenames = [s[0].split('/')[-1].replace('.jpg', '') for s in train_dataset.samples]
-    embeddings = np.load('dataset/embeddings.npy')
+    embeddings = np.load('Task 3/Chris/embeddings.npy')
     # TODO: Normalize the embeddings
 
     file_to_embedding = {}
@@ -194,7 +194,7 @@ if __name__ == '__main__':
     TEST_TRIPLETS = 'test_triplets.txt'
 
     # generate embedding for each image in the dataset
-    if(os.path.exists('dataset/embeddings.npy') == False):
+    if(os.path.exists('Task 3/Chris/embeddings.npy') == False):
         generate_embeddings()
 
     # load the training data
