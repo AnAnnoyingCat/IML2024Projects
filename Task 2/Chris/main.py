@@ -93,62 +93,152 @@ def modeling_and_prediction(X_train, y_train, X_test):
     """
 
     y_pred=np.zeros(X_test.shape[0])
-    #TODO: Define the model and fit it using training data. Then, use test data to make predictions
     #using the knn data as it seems like the best fit
     #trying different things for different kernels and just seeing what works.
     #i implemented this in a parallel manner so that it doesn't take way too long
-
+    
     #Things to try:
-    constants_to_try = [0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32]
-    initial_lengths_to_try = [0.0001,0.001, 0.01, 0.1, 0.5, 1, 1.5, 2, 4, 8, 16]
-    alphas_to_try = [0.1, 0.2, 0.4, 0.8, 1, 1.2, 1.4, 1.6, 2, 3, 4]
+    constants_to_try = [5, 6, 7, 8]
+    initial_lengths_to_try = [1]
+    alphas_to_try = [0.1, 0.12, 0.13, 0.14, 0.15, 0.16]
+    nus_to_try = [0.5, 1.5, 2.5]
+    rqalphas_to_try = [0.5, 0.7, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.8, 2]
 
-    #Trying them in parallel to speed things up, since the different argument combinations ar emutually exclusive.
+        #train test split
+    X_train_train, X_train_test, y_train_train, y_train_test = train_test_split(X_train, y_train, test_size=0.2, random_state=13)
+    """
+    #Trying RBF in parallel to speed things up, since the different argument combinations ar emutually exclusive.
+    print("about to try all the possible combos")
     results = Parallel(n_jobs=-1)(
-        delayed(try_combinations)(X_train, y_train, X_test, constant, length, alpha)
+        delayed(try_combination_of_params_on_rbf)(X_train_train, y_train_train, X_train_test, y_train_test, constant, length, alpha)
         for constant in constants_to_try
         for length in initial_lengths_to_try
         for alpha in alphas_to_try
     )
-    #plot the results to a seaborne pairplot
-    plot_results(results)
-
-    #print the best indices
-    opt_index = np.argmax(scores)
-
-    # Extract the optimal result
+    #findoing optimal value
+    opt_index = np.argmax([res['score'] for res in results])
     optres = results[opt_index]
 
-    # Extract optimal values
     optimal_constant = optres['constant']
-    optimal_length = optres['length']
+    optimal_init_length = optres['init_length']
     optimal_alpha = optres['alpha']
     optimal_score = optres['score']
-    print(f"Optimal result with constant {optimal_constant}, length {optimal_length}, and alpha {optimal_alpha}. R2 score: {optimal_score}")
+    print(f"Optimal result with constant {optimal_constant}, initial length {optimal_init_length}, and alpha {optimal_alpha}. R2 score: {optimal_score}")
 
-    # y_pred = gp.predict(X_test)
+    """
+    """
+    #Trying Matern in parallel to speed things up, since the different argument combinations ar emutually exclusive.
+    print("about to try all the possible combos")
+    results = Parallel(n_jobs=-1)(
+        delayed(try_combination_of_params_on_matern)(X_train_train, y_train_train, X_train_test, y_train_test, constant, length, alpha, nu)
+        for constant in constants_to_try
+        for length in initial_lengths_to_try
+        for alpha in alphas_to_try
+        for nu in nus_to_try
+    )
+    #finding optimal value
+    opt_index = np.argmax([res['score'] for res in results])
+    optres = results[opt_index]
+
+    optimal_constant = optres['constant']
+    optimal_init_length = optres['init_length']
+    optimal_alpha = optres['alpha']
+    optimal_score = optres['score']
+    optimal_nu = optres['nu']
+    print(f"Optimal result with constant {optimal_constant}, initial length {optimal_init_length}, alpha {optimal_alpha} and nu {optimal_nu}. R2 score: {optimal_score}")
+
+    #print("about to make a nice pairplot")
+    #plot the results to a seaborne pairplot
+    #plot_results(results)
+    """
+    """
+    #Trying RationalQuadratic in parallel to speed things up, since the different argument combinations ar emutually exclusive.
+    print("about to try all the possible combos")
+    results = Parallel(n_jobs=-1)(
+        delayed(try_combination_of_params_on_rational_quadratic)(X_train_train, y_train_train, X_train_test, y_train_test, constant, length, alpha, rqalpha)
+        for constant in constants_to_try
+        for length in initial_lengths_to_try
+        for alpha in alphas_to_try
+        for rqalpha in rqalphas_to_try
+    )
+    #finding optimal value
+    opt_index = np.argmax([res['score'] for res in results])
+    optres = results[opt_index]
+
+    optimal_constant = optres['constant']
+    optimal_init_length = optres['init_length']
+    optimal_alpha = optres['alpha']
+    optimal_score = optres['score']
+    optimal_rqalpha = optres['rqalpha']
+    print(f"Optimal result with constant {optimal_constant}, initial length {optimal_init_length}, alpha {optimal_alpha} and rqalpha {optimal_rqalpha}. R2 score: {optimal_score}")
+    
+    """
+    
+    #first test resulted in optimum c=4, l=1, alpha=0.1
+    #second test resulted optimum c=4.2, l=1.2, alpha = 0.13
+    #third test concluded optimal alpha = 0.135
+
+    #next up testing the Matern kernel.
+    #first test concludes optimum c=4, l=1, alpha=0.15, nu=2.5
+    #second test concludes optimum c=5, l=1, a=0.13, nu=2.5
+    #third test concluded the same except with a higher constant. testing out different high constants now
+    #fourth test concluded that 14 is apparently pretty good. let's try it. this is the final Matern test.
+
+    #next up the rational quadratic kernel
+    #first naive test yields c=3, l=1, a=0.14, rqa=1.2
+    #second test yields c6, i1, a0.14, rqa1.6
+
+    
+    print("predicting...")
+
+    kernel = ConstantKernel(constant_value=6) * RationalQuadratic(length_scale=1, length_scale_bounds=(1e-5, 1e7), alpha=1.6)
+    gp = GaussianProcessRegressor(kernel=kernel, alpha=0.14, n_restarts_optimizer=10)
+    gp.fit(X_train, y_train)
+    y_pred = gp.predict(X_test)
+    
 
     assert y_pred.shape == (100,), "Invalid data shape"
     return y_pred
-
+    
 def try_combination_of_params_on_rbf(X_train_train, y_train_train, X_train_test, y_train_test, constant, init_length, alpha):
     #init the kernel using current params
-    kernel = ConstantKernel(constant_value=c) * RBF(length_scale=initlength, length_scale_bounds=(1e-5, 1e5))
-    gp = GaussianProcessRegressor(kernel=kernel, alpha=alpha, n_restarts_optimizer=10)
-    gp.fit(X_train, y_train)
+    print(f"about to try combo: constant={constant}, init_length={init_length}, alpha={alpha}")
+    kernel = ConstantKernel(constant_value=constant) * RBF(length_scale=init_length, length_scale_bounds=(1e-5, 1e5))
+    gp = GaussianProcessRegressor(kernel=kernel, alpha=alpha, n_restarts_optimizer=4)
+    gp.fit(X_train_train, y_train_train)
     y_train_predict = gp.predict(X_train_test)
-    localScore = r2_score(y_train_test, y_train_predict)
+    local_score = r2_score(y_train_test, y_train_predict)
 
-    print(f"Done with combo: constant={constant}, length={length}, alpha={alpha}")
+    print(f"Done with combo: constant={constant}, init_length={init_length}, alpha={alpha}")
 
     return {'constant': constant, 'init_length': init_length, 'alpha': alpha, 'score': local_score}
 
-def plot_results(res):
-    #using seaborne pairplot as shown in the lecture
-    df = pd.DataFrame(res)
-    sns.pairplot(df, vars=['constant', 'length', 'alpha', 'score'])
-    pairplot.savefig('pairplot.png')
-    
+def try_combination_of_params_on_matern(X_train_train, y_train_train, X_train_test, y_train_test, constant, init_length, alpha, nu):
+    #init the kernel using current params
+    print(f"about to try combo: constant={constant}, init_length={init_length}, alpha={alpha}, nu={nu}")
+    kernel = ConstantKernel(constant_value=constant) * Matern(length_scale=init_length, length_scale_bounds=(1e-5, 1e5), nu=nu)
+    gp = GaussianProcessRegressor(kernel=kernel, alpha=alpha, n_restarts_optimizer=4)
+    gp.fit(X_train_train, y_train_train)
+    y_train_predict = gp.predict(X_train_test)
+    local_score = r2_score(y_train_test, y_train_predict)
+
+    print(f"Done with combo: constant={constant}, init_length={init_length}, alpha={alpha}, nu={nu}")
+
+    return {'constant': constant, 'init_length': init_length, 'alpha': alpha, 'nu': nu, 'score': local_score}
+
+def try_combination_of_params_on_rational_quadratic(X_train_train, y_train_train, X_train_test, y_train_test, constant, init_length, alpha, rqalpha):
+    #init the kernel using current params
+    print(f"about to try combo: constant={constant}, init_length={init_length}, alpha={alpha}, rqalpha={rqalpha}")
+    kernel = ConstantKernel(constant_value=constant) * RationalQuadratic(length_scale=init_length, length_scale_bounds=(1e-6, 1e6), alpha=rqalpha)
+    gp = GaussianProcessRegressor(kernel=kernel, alpha=alpha, n_restarts_optimizer=4)
+    gp.fit(X_train_train, y_train_train)
+    y_train_predict = gp.predict(X_train_test)
+    local_score = r2_score(y_train_test, y_train_predict)
+
+    print(f"Done with combo: constant={constant}, init_length={init_length}, alpha={alpha}, rqalpha={rqalpha}")
+
+    return {'constant': constant, 'init_length': init_length, 'alpha': alpha, 'rqalpha': rqalpha, 'score': local_score}
+
 
 # Main function. You don't have to change this
 if __name__ == "__main__":
