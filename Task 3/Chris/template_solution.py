@@ -6,6 +6,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader, TensorDataset
 import os
 import torch
+import torchvision
 from torchvision import transforms
 import torchvision.datasets as datasets
 import torch.nn as nn
@@ -26,8 +27,9 @@ def generate_embeddings():
     # TODO: define a transform to pre-process the images
     # The required pre-processing depends on the pre-trained model you choose 
     # below. 
-    # See https://pytorch.org/vision/stable/models.html#using-the-pre-trained-models
-    train_transforms = transforms.Compose([transforms.ToTensor()])
+    # Using SwinTransformer due to its recency and good performance on various tasks
+
+    train_transforms = torchvision.models.swin_transformer.Swin_B_Weights.IMAGENET1K_V1.transforms;
 
     train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=train_transforms)
     # Hint: adjust batch_size and num_workers to your PC configuration, so that you don't 
@@ -35,12 +37,13 @@ def generate_embeddings():
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=64,
                               shuffle=False,
-                              pin_memory=True, num_workers=12Task 3/Chris/embeddings.npy)
+                              pin_memory=True, num_workers=12)
 
-    # TODO: define a model for extraction of the embeddings (Hint: load a pretrained model,
-    #  more info here: https://pytorch.org/vision/stable/models.html)
-    model = nn.Module()
-    model.to(device)
+    model = torchvision.models.swin_b();
+    print(model)
+    newmodel = torch.nn.Sequential(*(list(model.children())[:-1]))
+    print(newmodel)
+
     embedding_size = 1000 # Dummy variable, replace with the actual embedding size once you 
     # pick your model
     num_images = len(train_dataset)
@@ -190,13 +193,13 @@ def test_model(model, loader):
 
 # Main function. You don't have to change this
 if __name__ == '__main__':
-    TRAIN_TRIPLETS = 'train_triplets.txt'
-    TEST_TRIPLETS = 'test_triplets.txt'
+    TRAIN_TRIPLETS = 'Task 3/Data/train_triplets.txt'
+    TEST_TRIPLETS = 'Task 3/Data/test_triplets.txt'
 
     # generate embedding for each image in the dataset
-    if(os.path.exists('Task 3/Chris/embeddings.npy') == False):
+    if(os.path.exists('Task 3/Chris/embeddings.npy') == False or True):
         generate_embeddings()
-
+    
     # load the training data
     X, y = get_data(TRAIN_TRIPLETS)
     # Create data loaders for the training data
