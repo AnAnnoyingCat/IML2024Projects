@@ -11,6 +11,7 @@ from torchvision import transforms
 import torchvision.datasets as datasets
 import torch.nn as nn
 import torch.nn.functional as F
+from PIL import Image
 
 # The device is automatically set to GPU if available, otherwise CPU
 # If you want to force the device to CPU, you can change the line to
@@ -24,56 +25,45 @@ def generate_embeddings():
     Transform, resize and normalize the images and then use a pretrained model to extract 
     the embeddings.
     """
-    # TODO: define a transform to pre-process the images
-    # The required pre-processing depends on the pre-trained model you choose 
-    # below. 
     # Using SwinTransformer due to its recency and good performance on various tasks
-
     
     train_transforms = transforms.Compose([
-        transforms.ToTensor(), 
-        transforms.Resize(size=2, interpolation=transforms.InterpolationMode.BICUBIC), 
+        transforms.Resize(size=238, interpolation=transforms.InterpolationMode.BICUBIC), 
         transforms.CenterCrop(size=224),
+        transforms.ToTensor(), 
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]);
 
-    og_transforms = transforms.Compose([transforms.ToTensor()])
     train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=train_transforms)
-    # Hint: adjust batch_size and num_workers to your PC configuration, so that you don't 
-    # run out of memory (VRAM if on GPU, RAM if on CPU)
-    print(train_dataset.__getitem__(1))
 
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=64,
                               shuffle=False,
-                              pin_memory=True, num_workers=4)
+                              pin_memory=True, num_workers=8)
 
-    model = torchvision.models.swin_b();
-    #print(model)
+    model = torchvision.models.swin_b()
 
-    #using final flattened layer
+    #removing classification layer
     embedding_model = torch.nn.Sequential(*(list(model.children())[:-1]))
-    #print(embedding_model)
+    #move my model to GPU if present
+    embedding_model.to(device)
 
-    #using final full layer
-    #embedding_model = torch.nn.Sequential(*(list(model.children())[:-5]))
-    #print(embedding_model)
 
-    embedding_size = 1 
-    
-    num_images = len(train_dataset)
     embeddings = []
-
-    for batch in train_loader:
-        inputs = batch
+    i = 0
+    for batch, _ in train_loader:
+        inputs = batch.to(device) #move to GPU if available
         with torch.no_grad():
-            for i in inputs:
-                print(i)
-                curremb = embedding_model(i)
-                embeddings.append(curremb)
- 
-    embeddings = np.concatenate(embeddings, axis=0)
-        
-    np.save('Task 3/Chris/embeddings.npy', embeddings)
+            #calculate batch
+            batch_embeddings = embedding_model(inputs)
+            embeddings.append(batch_embeddings.to(torch.device('cpu'))) #move back to CPU
+            print(f"finished batch {i}")
+            i+=1
+
+    embeddings = torch.cat(embeddings, dim=0)
+
+    embeddings_np = embeddings.numpy()
+
+    np.save('Task 3/Chris/embeddings.npy', embeddings_np)
 
 
 def get_data(file, train=True):
@@ -221,7 +211,8 @@ if __name__ == '__main__':
     # generate embedding for each image in the dataset
     if(os.path.exists('Task 3/Chris/embeddings.npy') == False or True):
         generate_embeddings()
-    
+        
+    """
     # load the training data
     X, y = get_data(TRAIN_TRIPLETS)
     # Create data loaders for the training data
@@ -242,3 +233,4 @@ if __name__ == '__main__':
     # test the model on the test data
     test_model(model, test_loader)
     print("Results saved to results.txt")
+"""
