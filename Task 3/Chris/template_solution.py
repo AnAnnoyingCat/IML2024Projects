@@ -29,23 +29,31 @@ def generate_embeddings():
     # below. 
     # Using SwinTransformer due to its recency and good performance on various tasks
 
-    train_transforms = torchvision.models.swin_transformer.Swin_B_Weights.IMAGENET1K_V1.transforms;
+    train_transforms = transforms.Compose([torchvision.models.swin_transformer.Swin_B_Weights.IMAGENET1K_V1.transforms, transforms.ToTensor()]);
 
     train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=train_transforms)
     # Hint: adjust batch_size and num_workers to your PC configuration, so that you don't 
     # run out of memory (VRAM if on GPU, RAM if on CPU)
     train_loader = DataLoader(dataset=train_dataset,
-                              batch_size=64,
+                              batch_size=8,
                               shuffle=False,
-                              pin_memory=True, num_workers=12)
+                              pin_memory=True, num_workers=2)
+
+    for image in train_loader:
+        print(image)
+    
 
     model = torchvision.models.swin_b();
-    print(model)
-    newmodel = torch.nn.Sequential(*(list(model.children())[:-1]))
-    print(newmodel)
+    #print(model)
+    #using final flattened layer
+    embedding_model = torch.nn.Sequential(*(list(model.children())[:-1]))
+    #print(embedding_model)
+    #using final full layer
+    #embedding_model = torch.nn.Sequential(*(list(model.children())[:-5]))
+    #print(embedding_model)
 
-    embedding_size = 1000 # Dummy variable, replace with the actual embedding size once you 
-    # pick your model
+    embedding_size = 1 
+    
     num_images = len(train_dataset)
     embeddings = np.zeros((num_images, embedding_size))
     # TODO: Use the model to extract the embeddings. Hint: remove the last layers of the 
