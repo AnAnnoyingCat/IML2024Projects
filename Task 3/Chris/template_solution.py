@@ -84,7 +84,7 @@ def get_data(file, train=True):
     # generate training data from triplets
     train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/",
                                          transform=None)
-    filenames = [s[0].split('/')[-1].replace('.jpg', '') for s in train_dataset.samples]
+    filenames = [s[0].split('/')[-1].replace('.jpg', '')[-5:] for s in train_dataset.samples]
     embeddings = np.load('Task 3/Chris/embeddings.npy')
     # TODO: Normalize the embeddings
 
@@ -209,12 +209,13 @@ if __name__ == '__main__':
     TEST_TRIPLETS = 'Task 3/Data/test_triplets.txt'
 
     # generate embedding for each image in the dataset
-    if(os.path.exists('Task 3/Chris/embeddings.npy') == False or True):
+    if(os.path.exists('Task 3/Chris/embeddings.npy') == False):
         generate_embeddings()
-        
-    """
+
+    
     # load the training data
     X, y = get_data(TRAIN_TRIPLETS)
+    """
     # Create data loaders for the training data
     train_loader = create_loader_from_np(X, y, train = True, batch_size=64)
     # delete the loaded training data to save memory, as the data loader copies
