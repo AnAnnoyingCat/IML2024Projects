@@ -6,6 +6,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader, TensorDataset
 import os
 import torch
+import torchvision
 from torchvision import transforms
 import torchvision.datasets as datasets
 import torch.nn as nn
@@ -23,7 +24,7 @@ def generate_embeddings():
     Transform, resize and normalize the images and then use a pretrained model to extract 
     the embeddings.
     """
-    # TODO: define a transform to pre-process the images
+    """ # TODO: define a transform to pre-process the images
     # The required pre-processing depends on the pre-trained model you choose 
     # below. 
     # See https://pytorch.org/vision/stable/models.html#using-the-pre-trained-models
@@ -48,7 +49,48 @@ def generate_embeddings():
     # TODO: Use the model to extract the embeddings. Hint: remove the last layers of the 
     # model to access the embeddings the model generates. 
 
-    np.save('dataset/embeddings.npy', embeddings)
+    np.save('dataset/embeddings.npy', embeddings) """
+    
+    ##########################################################################3
+    # Using SwinTransformer due to its recency and good performance on various tasks
+    
+    train_transforms = transforms.Compose([
+        transforms.Resize(size=238, interpolation=transforms.InterpolationMode.BICUBIC), 
+        transforms.CenterCrop(size=224),
+        transforms.ToTensor(), 
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]);
+    
+    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=train_transforms)
+
+    train_loader = DataLoader(dataset=train_dataset,
+                              batch_size=64,
+                              shuffle=False,
+                              pin_memory=True, num_workers=8)
+
+    model = torchvision.models.swin_b()
+
+    #removing classification layer
+    embedding_model = torch.nn.Sequential(*(list(model.children())[:-1]))
+    #move my model to GPU if present
+    embedding_model.to(device)
+
+
+    embeddings = []
+    i = 0
+    for batch, _ in train_loader:
+        inputs = batch.to(device) #move to GPU if available
+        with torch.no_grad():
+            #calculate batch
+            batch_embeddings = embedding_model(inputs)
+            embeddings.append(batch_embeddings.to(torch.device('cpu'))) #move back to CPU
+            print(f"finished batch {i}")
+            i+=1
+
+    embeddings = torch.cat(embeddings, dim=0)
+
+    embeddings_np = embeddings.numpy()
+
+    np.save('Task 3/Jasmin/embeddings.npy', embeddings_np)
 
 
 def get_data(file, train=True):
@@ -67,11 +109,13 @@ def get_data(file, train=True):
             triplets.append(line)
 
     # generate training data from triplets
-    train_dataset = datasets.ImageFolder(root="dataset/",
+    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/",
                                          transform=None)
     filenames = [s[0].split('/')[-1].replace('.jpg', '') for s in train_dataset.samples]
-    embeddings = np.load('dataset/embeddings.npy')
+    embeddings = np.load('Task 3/Chris/embeddings.npy')
     # TODO: Normalize the embeddings
+    norms = np.linalg.norm(embeddings, axis=1, keepdims=True) #J (hope this is correct)
+    embeddings = embeddings / norms #J (hope this is correct)
 
     file_to_embedding = {}
     for i in range(len(filenames)):
@@ -125,7 +169,9 @@ class Net(nn.Module):
         The constructor of the model.
         """
         super().__init__()
-        self.fc = nn.Linear(3000, 1)
+        self.fc = nn.Linear(3000, 64)
+        self.fc2 = nn.Linear(64, 32)
+        self.fc3 = nn.Linear(32, 1)
 
     def forward(self, x):
         """
@@ -137,9 +183,15 @@ class Net(nn.Module):
         """
         x = self.fc(x)
         x = F.relu(x)
+        
+        x = self.fc2(x)
+        x = F.relu(x)
+        
+        x = self.fc3(x)
+        x=torch.sigmoid(x)
         return x
 
-def train_model(train_loader):
+def train_model(train_loader, val_loader=None):
     """
     The training procedure of the model; it accepts the training data, defines the model 
     and then trains it.
@@ -157,12 +209,28 @@ def train_model(train_loader):
     # validation split and print it out. This enables you to see how your model is performing 
     # on the validation data before submitting the results on the server. After choosing the 
     # best model, train it on the whole training data.
-    for epoch in range(n_epochs):        
+    criterion = nn.BCELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    
+    for epoch in range(n_epochs): 
+        epoch_loss = 0       
         for [X, y] in train_loader:
-            pass
+            X, y = X.to(device), y.to(device)
+            optimizer.zero_grad()
+            output = model(X)
+            loss = criterion(output, y.unsqueeze(1).type(torch.float))
+            loss.backward()
+            optimizer.step()
+            epoch_loss += loss.item()
+            
+        if val_loader:
+            val_accuracy = evaluate_model(model, val_loader)
+            print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}, Val Accuracy: {val_accuracy:.4f}")
+        else:
+            print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}")
     return model
 
-def test_model(model, loader):
+def test_model(model, loader, validation_set=False):
     """
     The testing procedure of the model; it accepts the testing data and the trained model and 
     then tests the model on it.
@@ -185,25 +253,68 @@ def test_model(model, loader):
             predicted[predicted < 0.5] = 0
             predictions.append(predicted)
         predictions = np.vstack(predictions)
-    np.savetxt("results.txt", predictions, fmt='%i')
+    if validation_set:
+        np.savetxt("val_results.txt", predictions, fmt='%i')
+    else:
+        np.savetxt("results.txt", predictions, fmt='%i')
+    
+def evaluate_model(model, loader):
+    """
+    Evaluate the model on validation or test data.
 
+    input: model: torch.nn.Module, the trained model
+           loader: torch.data.util.DataLoader, the object containing the validation or test data
+    
+    output: val_loss: float, the average loss on the validation or test data
+    """
+    model.eval()
+    criterion = nn.BCELoss()
+    val_loss = 0
+    with torch.no_grad():
+        for [X, y] in loader:
+            X, y = X.to(device), y.to(device)
+            output = model(X)
+            loss = criterion(output, y.unsqueeze(1).type(torch.float))
+            val_loss += loss.item()
+    return val_loss
 
 # Main function. You don't have to change this
 if __name__ == '__main__':
-    TRAIN_TRIPLETS = 'train_triplets.txt'
-    TEST_TRIPLETS = 'test_triplets.txt'
+    TRAIN_TRIPLETS = 'Task 3/Data/train_triplets.txt'
+    TEST_TRIPLETS = 'Task 3/Data/test_triplets.txt'
 
     # generate embedding for each image in the dataset
-    if(os.path.exists('dataset/embeddings.npy') == False):
-        generate_embeddings()
+    """ if(os.path.exists('Task 3/Chris/embeddings.npy') == False):
+        generate_embeddings() """
 
     # load the training data
     X, y = get_data(TRAIN_TRIPLETS)
-    # Create data loaders for the training data
-    train_loader = create_loader_from_np(X, y, train = True, batch_size=64)
+    
+     # Combine X and y for shuffling
+    data = list(zip(X, y))
+    np.random.shuffle(data)
+    # Split the data into training and validation sets (80% train, 20% validation)
+    split = int(0.8 * len(data))
+    train_data = data[:split]
+    val_data = data[split:]
+    # Separate features and labels
+    X_train, y_train = zip(*train_data)
+    X_val, y_val = zip(*val_data)
+    
+    # Create data loaders for the training data   
+    train_loader = create_loader_from_np(np.array(X_train), np.array(y_train), train = True, batch_size=64)
+    # Create data loaders for the validation data
+    val_loader = create_loader_from_np(np.array(X_val), np.array(y_val), train=False, batch_size=64)
+    
     # delete the loaded training data to save memory, as the data loader copies
     del X
     del y
+    del data
+    del val_data
+    del X_train
+    del y_train
+    del X_val
+    del y_val
 
     # repeat for testing data
     X_test, y_test = get_data(TEST_TRIPLETS, train=False)
@@ -214,6 +325,10 @@ if __name__ == '__main__':
     # define a model and train it
     model = train_model(train_loader)
     
+    val_model = test_model(model, val_loader, validation_set=True)
+    
+    
     # test the model on the test data
     test_model(model, test_loader)
     print("Results saved to results.txt")
+ 
