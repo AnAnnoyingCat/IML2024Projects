@@ -140,8 +140,8 @@ class Net(nn.Module):
         The constructor of the model.
         """
         super().__init__()
-        self.fc = nn.Linear(3072, 64)
-        self.fc2 = nn.Linear(64, 32)
+        self.fc = nn.Linear(3072, 128)
+        self.fc2 = nn.Linear(128, 32)
         self.fc3 = nn.Linear(32, 1)
 
     def forward(self, x):
@@ -159,7 +159,8 @@ class Net(nn.Module):
         x = F.relu(x)
         
         x = self.fc3(x)
-        x=torch.sigmoid(x)
+        x = torch.sigmoid(x)
+
         return x
 
 def train_model(train_loader):
@@ -181,7 +182,7 @@ def train_model(train_loader):
     # on the validation data before submitting the results on the server. After choosing the 
     # best model, train it on the whole training data.
     criterion = nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
     
     for epoch in range(n_epochs): 
         epoch_loss = 0       
@@ -194,11 +195,8 @@ def train_model(train_loader):
             optimizer.step()
             epoch_loss += loss.item()
             
-        if val_loader:
-            val_accuracy = evaluate_model(model, val_loader)
-            print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}, Val Accuracy: {val_accuracy:.4f}")
-        else:
-            print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}")
+        
+        print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}")
     return model
 
 def evaluate_model(model, loader):
@@ -294,7 +292,7 @@ if __name__ == '__main__':
     # define a model and train it
     model = train_model(train_loader)
     
-    val_model = test_model(model, val_loader, validation_set=True)
+    val_model = test_model(model, val_loader)
     
     
     # test the model on the test data
