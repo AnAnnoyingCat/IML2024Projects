@@ -140,7 +140,9 @@ class Net(nn.Module):
         The constructor of the model.
         """
         super().__init__()
-        self.fc = nn.Linear(3000, 1)
+        self.fc = nn.Linear(3072, 64)
+        self.fc2 = nn.Linear(64, 32)
+        self.fc3 = nn.Linear(32, 1)
 
     def forward(self, x):
         """
@@ -152,6 +154,12 @@ class Net(nn.Module):
         """
         x = self.fc(x)
         x = F.relu(x)
+        
+        x = self.fc2(x)
+        x = F.relu(x)
+        
+        x = self.fc3(x)
+        x=torch.sigmoid(x)
         return x
 
 def train_model(train_loader):
@@ -172,10 +180,46 @@ def train_model(train_loader):
     # validation split and print it out. This enables you to see how your model is performing 
     # on the validation data before submitting the results on the server. After choosing the 
     # best model, train it on the whole training data.
-    for epoch in range(n_epochs):        
+    criterion = nn.BCELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    
+    for epoch in range(n_epochs): 
+        epoch_loss = 0       
         for [X, y] in train_loader:
-            pass
+            X, y = X.to(device), y.to(device)
+            optimizer.zero_grad()
+            output = model(X)
+            loss = criterion(output, y.unsqueeze(1).type(torch.float))
+            loss.backward()
+            optimizer.step()
+            epoch_loss += loss.item()
+            
+        if val_loader:
+            val_accuracy = evaluate_model(model, val_loader)
+            print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}, Val Accuracy: {val_accuracy:.4f}")
+        else:
+            print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}")
     return model
+
+def evaluate_model(model, loader):
+    """
+    Evaluate the model on validation or test data.
+
+    input: model: torch.nn.Module, the trained model
+           loader: torch.data.util.DataLoader, the object containing the validation or test data
+    
+    output: val_loss: float, the average loss on the validation or test data
+    """
+    model.eval()
+    criterion = nn.BCELoss()
+    val_loss = 0
+    with torch.no_grad():
+        for [X, y] in loader:
+            X, y = X.to(device), y.to(device)
+            output = model(X)
+            loss = criterion(output, y.unsqueeze(1).type(torch.float))
+            val_loss += loss.item()
+    return val_loss
 
 def test_model(model, loader):
     """
@@ -200,7 +244,7 @@ def test_model(model, loader):
             predicted[predicted < 0.5] = 0
             predictions.append(predicted)
         predictions = np.vstack(predictions)
-    np.savetxt("results.txt", predictions, fmt='%i')
+    np.savetxt("Task 3/Chris/results.txt", predictions, fmt='%i')
 
 
 # Main function. You don't have to change this
@@ -209,18 +253,37 @@ if __name__ == '__main__':
     TEST_TRIPLETS = 'Task 3/Data/test_triplets.txt'
 
     # generate embedding for each image in the dataset
-    if(os.path.exists('Task 3/Chris/embeddings.npy') == False):
-        generate_embeddings()
+    """ if(os.path.exists('Task 3/Chris/embeddings.npy') == False):
+        generate_embeddings() """
 
-    
     # load the training data
     X, y = get_data(TRAIN_TRIPLETS)
-    """
-    # Create data loaders for the training data
-    train_loader = create_loader_from_np(X, y, train = True, batch_size=64)
+    
+     # Combine X and y for shuffling
+    data = list(zip(X, y))
+    np.random.shuffle(data)
+    # Split the data into training and validation sets (80% train, 20% validation)
+    split = int(0.8 * len(data))
+    train_data = data[:split]
+    val_data = data[split:]
+    # Separate features and labels
+    X_train, y_train = zip(*train_data)
+    X_val, y_val = zip(*val_data)
+    
+    # Create data loaders for the training data   
+    train_loader = create_loader_from_np(np.array(X_train), np.array(y_train), train = True, batch_size=64)
+    # Create data loaders for the validation data
+    val_loader = create_loader_from_np(np.array(X_val), np.array(y_val), train=False, batch_size=64)
+    
     # delete the loaded training data to save memory, as the data loader copies
     del X
     del y
+    del data
+    del val_data
+    del X_train
+    del y_train
+    del X_val
+    del y_val
 
     # repeat for testing data
     X_test, y_test = get_data(TEST_TRIPLETS, train=False)
@@ -231,7 +294,9 @@ if __name__ == '__main__':
     # define a model and train it
     model = train_model(train_loader)
     
+    val_model = test_model(model, val_loader, validation_set=True)
+    
+    
     # test the model on the test data
     test_model(model, test_loader)
     print("Results saved to results.txt")
-"""
