@@ -109,13 +109,12 @@ def get_data(file, train=True):
             triplets.append(line)
 
     # generate training data from triplets
-    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/",
-                                         transform=None)
-    filenames = [s[0].split('/')[-1].replace('.jpg', '') for s in train_dataset.samples]
+    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=None)
+    filenames = [s[0].split('/')[-1].replace('.jpg', '')[-5:] for s in train_dataset.samples]
     embeddings = np.load('Task 3/Chris/embeddings.npy')
     # TODO: Normalize the embeddings
-    norms = np.linalg.norm(embeddings, axis=1, keepdims=True) #J (hope this is correct)
-    embeddings = embeddings / norms #J (hope this is correct)
+    """ norms = np.linalg.norm(embeddings, axis=1, keepdims=True) #J (hope this is correct)
+    embeddings = embeddings / norms #J (hope this is correct) """
 
     file_to_embedding = {}
     for i in range(len(filenames)):
@@ -169,9 +168,10 @@ class Net(nn.Module):
         The constructor of the model.
         """
         super().__init__()
-        self.fc = nn.Linear(3000, 64)
-        self.fc2 = nn.Linear(64, 32)
-        self.fc3 = nn.Linear(32, 1)
+        self.fc = nn.Linear(3072, 256)
+        self.fc2 = nn.Linear(256, 64)
+        #self.fc3 = nn.Linear(512, 128)
+        self.fc4 = nn.Linear(64, 1)
 
     def forward(self, x):
         """
@@ -181,17 +181,26 @@ class Net(nn.Module):
 
         output: x: torch.Tensor, the output of the model
         """
+        #print("Input size:", x.size())
         x = self.fc(x)
         x = F.relu(x)
         
+        #print("After fc1 size:", x.size())
         x = self.fc2(x)
         x = F.relu(x)
         
-        x = self.fc3(x)
-        x=torch.sigmoid(x)
+        #print("After fc2 size:", x.size())
+        """ x = self.fc3(x)
+        x = F.relu(x) """
+        
+       # print("After fc3 size:", x.size())
+        x = self.fc4(x)
+        x = torch.sigmoid(x)
+        #print("Output size:", x.size())
+        
         return x
 
-def train_model(train_loader, val_loader=None):
+def train_model(train_loader):
     """
     The training procedure of the model; it accepts the training data, defines the model 
     and then trains it.
@@ -222,12 +231,9 @@ def train_model(train_loader, val_loader=None):
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item()
+        
+        print(f"Epoch {epoch + 1}, loss: {epoch_loss / len(train_loader)}")
             
-        if val_loader:
-            val_accuracy = evaluate_model(model, val_loader)
-            print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}, Val Accuracy: {val_accuracy:.4f}")
-        else:
-            print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}")
     return model
 
 def test_model(model, loader, validation_set=False):
@@ -254,29 +260,10 @@ def test_model(model, loader, validation_set=False):
             predictions.append(predicted)
         predictions = np.vstack(predictions)
     if validation_set:
-        np.savetxt("val_results.txt", predictions, fmt='%i')
+        np.savetxt("Task 3\\Jasmin\\val_results.txt", predictions, fmt='%i')
     else:
-        np.savetxt("results.txt", predictions, fmt='%i')
+        np.savetxt("Task 3\\Jasmin\\results3.txt", predictions, fmt='%i')
     
-def evaluate_model(model, loader):
-    """
-    Evaluate the model on validation or test data.
-
-    input: model: torch.nn.Module, the trained model
-           loader: torch.data.util.DataLoader, the object containing the validation or test data
-    
-    output: val_loss: float, the average loss on the validation or test data
-    """
-    model.eval()
-    criterion = nn.BCELoss()
-    val_loss = 0
-    with torch.no_grad():
-        for [X, y] in loader:
-            X, y = X.to(device), y.to(device)
-            output = model(X)
-            loss = criterion(output, y.unsqueeze(1).type(torch.float))
-            val_loss += loss.item()
-    return val_loss
 
 # Main function. You don't have to change this
 if __name__ == '__main__':
@@ -326,6 +313,16 @@ if __name__ == '__main__':
     model = train_model(train_loader)
     
     val_model = test_model(model, val_loader, validation_set=True)
+    correctPredictions = 0
+    totalPredictions = 0
+    
+    with (open("Task 3/Jasmin/val_results.txt", "r")) as f:
+        for line in f:
+            for prediction in line.split():
+                if prediction == "1":
+                    correctPredictions += 1
+                totalPredictions += 1
+    print(f"Validation accuracy: {correctPredictions / totalPredictions}")
     
     
     # test the model on the test data
