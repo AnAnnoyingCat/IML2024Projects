@@ -95,7 +95,8 @@ def get_data(file, train=True):
     filenames = [s[0].split('/')[-1].replace('.jpg', '')[-5:] for s in train_dataset.samples]
     embeddings = np.load('Task 3/Chris/resNet_avgpool2d_embeddings.npy')
     # TODO: Normalize the embeddings
-
+    #norms = np.linalg.norm(embeddings, axis=1, keepdims=True) #J (hope this is correct)
+    #embeddings = embeddings / norms #J (hope this is correct) """
     file_to_embedding = {}
     for i in range(len(filenames)):
         file_to_embedding[filenames[i]] = embeddings[i]
@@ -171,7 +172,7 @@ class Net(nn.Module):
 
         return x
 
-def train_model(train_loader):
+def train_model(train_loader, val_loader):
     """
     The training procedure of the model; it accepts the training data, defines the model 
     and then trains it.
@@ -183,14 +184,14 @@ def train_model(train_loader):
     model = Net()
     model.train()
     model.to(device)
-    n_epochs = 20
+    n_epochs = 10
     # TODO: define a loss function, optimizer and proceed with training. Hint: use the part 
     # of the training data as a validation split. After each epoch, compute the loss on the 
     # validation split and print it out. This enables you to see how your model is performing 
     # on the validation data before submitting the results on the server. After choosing the 
     # best model, train it on the whole training data.
     criterion = nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0004)
     
     for epoch in range(n_epochs): 
         epoch_loss = 0       
@@ -204,30 +205,28 @@ def train_model(train_loader):
             epoch_loss += loss.item()
             
         
-        print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}")
+        print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}, Validation Accuracy: {get_error(model, val_loader):.4f}")
     return model
 
-def evaluate_model(model, loader):
+def get_error(model, val_loader):
     """
-    Evaluate the model on validation or test data.
-
-    input: model: torch.nn.Module, the trained model
-           loader: torch.data.util.DataLoader, the object containing the validation or test data
-    
-    output: val_loss: float, the average loss on the validation or test data
+    Get error of current model on validation set
     """
     model.eval()
-    criterion = nn.BCELoss()
-    val_loss = 0
+    correct = 0
+    total = 0
     with torch.no_grad():
-        for [X, y] in loader:
-            X, y = X.to(device), y.to(device)
-            output = model(X)
-            loss = criterion(output, y.unsqueeze(1).type(torch.float))
-            val_loss += loss.item()
-    return val_loss
+        for [X, y] in val_loader:
+            # Assuming data is a tuple with a single value, which is the zipped (X_val, y_val) pair
+            X_val, y_val = X.to(device), y.to(device)
+            outputs = model(X_val)
+            predicted = (outputs > 0.5).float()
+            total += y_val.size(0)
+            correct += (predicted == y_val.unsqueeze(1)).sum().item()
+    return correct / total
 
-def test_model(model, loader):
+
+def test_model(model, loader, validation_set=False):
     """
     The testing procedure of the model; it accepts the testing data and the trained model and 
     then tests the model on it.
@@ -250,8 +249,11 @@ def test_model(model, loader):
             predicted[predicted < 0.5] = 0
             predictions.append(predicted)
         predictions = np.vstack(predictions)
-    np.savetxt("Task 3/Chris/results.txt", predictions, fmt='%i')
-
+    if validation_set:
+        np.savetxt("Task 3\\Chris\\val_results.txt", predictions, fmt='%i')
+    else:
+        np.savetxt("Task 3\\Chris\\results4.txt", predictions, fmt='%i')
+    
 
 # Main function. You don't have to change this
 if __name__ == '__main__':
@@ -262,8 +264,6 @@ if __name__ == '__main__':
     
     #generate_embeddings() 
     
-    data = np.load('Task 3/Chris/resNet_avgpool2d_embeddings.npy')
-    print(np.shape(data))
     # load the training data
     X, y = get_data(TRAIN_TRIPLETS)
     
@@ -281,8 +281,7 @@ if __name__ == '__main__':
     # Create data loaders for the training data   
     train_loader = create_loader_from_np(np.array(X_train), np.array(y_train), train = True, batch_size=64)
     # Create data loaders for the validation data
-    val_loader = create_loader_from_np(np.array(X_val), np.array(y_val), train=False, batch_size=64)
-    
+    val_loader = create_loader_from_np(np.array(X_val), np.array(y_val), train=True, batch_size=64)
     # delete the loaded training data to save memory, as the data loader copies
     del X
     del y
@@ -292,6 +291,7 @@ if __name__ == '__main__':
     del y_train
     del X_val
     del y_val
+ 
 
     # repeat for testing data
     X_test, y_test = get_data(TEST_TRIPLETS, train=False)
@@ -300,12 +300,8 @@ if __name__ == '__main__':
     del y_test
 
     # define a model and train it
-    model = train_model(train_loader)
-    
-    val_model = test_model(model, val_loader)
-    
+    model = train_model(train_loader, val_loader)   
     
     # test the model on the test data
     test_model(model, test_loader)
     print("Results saved to results.txt")
-    
