@@ -20,6 +20,7 @@ from PIL import Image
 # same device.
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+
 def generate_embeddings():
     """
     Transform, resize and normalize the images and then use a pretrained model to extract 
@@ -27,26 +28,32 @@ def generate_embeddings():
     """
     # Using SwinTransformer due to its recency and good performance on various tasks
     
-    train_transforms = transforms.Compose([
+    swin_pre_transforms = transforms.Compose([
         transforms.Resize(size=238, interpolation=transforms.InterpolationMode.BICUBIC), 
         transforms.CenterCrop(size=224),
         transforms.ToTensor(), 
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]);
 
-    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=train_transforms)
+    resNet_pre_transforms = transforms.Compose([
+        transforms.Resize(size=256, interpolation=transforms.InterpolationMode.BILINEAR), 
+        transforms.CenterCrop(size=224),
+        transforms.ToTensor(), 
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]);
+
+    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=resNet_pre_transforms)
 
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=64,
                               shuffle=False,
                               pin_memory=True, num_workers=8)
 
-    model = torchvision.models.swin_b()
+    model = torchvision.models.resnet18(weights='DEFAULT')
 
     #removing classification layer
     embedding_model = torch.nn.Sequential(*(list(model.children())[:-1]))
     #move my model to GPU if present
     embedding_model.to(device)
-
+    embedding_model.eval()
 
     embeddings = []
     i = 0
@@ -55,15 +62,16 @@ def generate_embeddings():
         with torch.no_grad():
             #calculate batch
             batch_embeddings = embedding_model(inputs)
+            batch_embeddings = torch.squeeze(batch_embeddings) #remove dims of size 1
             embeddings.append(batch_embeddings.to(torch.device('cpu'))) #move back to CPU
             print(f"finished batch {i}")
             i+=1
 
-    embeddings = torch.cat(embeddings, dim=0)
+    embeddings = torch.cat(embeddings)
 
     embeddings_np = embeddings.numpy()
 
-    np.save('Task 3/Chris/embeddings.npy', embeddings_np)
+    np.save('Task 3/Chris/resNet_avgpool2d_embeddings.npy', embeddings_np)
 
 
 def get_data(file, train=True):
@@ -85,7 +93,7 @@ def get_data(file, train=True):
     train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/",
                                          transform=None)
     filenames = [s[0].split('/')[-1].replace('.jpg', '')[-5:] for s in train_dataset.samples]
-    embeddings = np.load('Task 3/Chris/embeddings.npy')
+    embeddings = np.load('Task 3/Chris/resNet_avgpool2d_embeddings.npy')
     # TODO: Normalize the embeddings
 
     file_to_embedding = {}
@@ -140,7 +148,7 @@ class Net(nn.Module):
         The constructor of the model.
         """
         super().__init__()
-        self.fc = nn.Linear(3072, 128)
+        self.fc = nn.Linear(1536, 128)
         self.fc2 = nn.Linear(128, 32)
         self.fc3 = nn.Linear(32, 1)
 
@@ -182,7 +190,7 @@ def train_model(train_loader):
     # on the validation data before submitting the results on the server. After choosing the 
     # best model, train it on the whole training data.
     criterion = nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     
     for epoch in range(n_epochs): 
         epoch_loss = 0       
@@ -251,9 +259,11 @@ if __name__ == '__main__':
     TEST_TRIPLETS = 'Task 3/Data/test_triplets.txt'
 
     # generate embedding for each image in the dataset
-    """ if(os.path.exists('Task 3/Chris/embeddings.npy') == False):
-        generate_embeddings() """
-
+    
+    #generate_embeddings() 
+    
+    data = np.load('Task 3/Chris/resNet_avgpool2d_embeddings.npy')
+    print(np.shape(data))
     # load the training data
     X, y = get_data(TRAIN_TRIPLETS)
     
@@ -298,3 +308,4 @@ if __name__ == '__main__':
     # test the model on the test data
     test_model(model, test_loader)
     print("Results saved to results.txt")
+    
