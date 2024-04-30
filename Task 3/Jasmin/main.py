@@ -113,7 +113,7 @@ def get_data(file, train=True):
     filenames = [s[0].split('/')[-1].replace('.jpg', '')[-5:] for s in train_dataset.samples]
     embeddings = np.load('Task 3/Chris/embeddings.npy')
     # TODO: Normalize the embeddings
-    """ norms = np.linalg.norm(embeddings, axis=1, keepdims=True) #J (hope this is correct)
+    norms = np.linalg.norm(embeddings, axis=1, keepdims=True) #J (hope this is correct)
     embeddings = embeddings / norms #J (hope this is correct) """
 
     file_to_embedding = {}
@@ -168,10 +168,10 @@ class Net(nn.Module):
         The constructor of the model.
         """
         super().__init__()
-        self.fc = nn.Linear(3072, 256)
-        self.fc2 = nn.Linear(256, 64)
+        self.fc = nn.Linear(3072, 128)
+        self.fc2 = nn.Linear(128, 32)
         #self.fc3 = nn.Linear(512, 128)
-        self.fc4 = nn.Linear(64, 1)
+        self.fc4 = nn.Linear(32, 1)
 
     def forward(self, x):
         """
@@ -292,6 +292,7 @@ if __name__ == '__main__':
     train_loader = create_loader_from_np(np.array(X_train), np.array(y_train), train = True, batch_size=64)
     # Create data loaders for the validation data
     val_loader = create_loader_from_np(np.array(X_val), np.array(y_val), train=False, batch_size=64)
+    quick_test_loader = create_loader_from_np(np.array(X_train), np.array(y_train), train=False, batch_size=64)
     
     # delete the loaded training data to save memory, as the data loader copies
     del X
@@ -323,6 +324,18 @@ if __name__ == '__main__':
                     correctPredictions += 1
                 totalPredictions += 1
     print(f"Validation accuracy: {correctPredictions / totalPredictions}")
+    
+    
+    #test model on the trianing data --> should give nearly 100 % accuracy since it's trained on this data. If this is not the case, there is a problem with the model
+    # accuracy is actually about 0.48, so we do have a problem with the model
+    quick_test_model = test_model(model, quick_test_loader, validation_set=True)
+    with (open("Task 3/Jasmin/val_results.txt", "r")) as f:
+        for line in f:
+            for prediction in line.split():
+                if prediction == "1":
+                    correctPredictions += 1
+                totalPredictions += 1
+    print(f"Validation accuracy of quick test: {correctPredictions / totalPredictions}")
     
     
     # test the model on the test data
