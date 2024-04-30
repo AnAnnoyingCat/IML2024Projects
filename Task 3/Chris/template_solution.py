@@ -182,7 +182,7 @@ def train_model(train_loader):
     # on the validation data before submitting the results on the server. After choosing the 
     # best model, train it on the whole training data.
     criterion = nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     
     for epoch in range(n_epochs): 
         epoch_loss = 0       
