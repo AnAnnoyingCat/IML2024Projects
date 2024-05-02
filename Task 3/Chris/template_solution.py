@@ -198,7 +198,7 @@ def train_model(train_loader, val_loader):
     model = Net()
     model.train()
     model.to(device)
-    n_epochs = 20
+    n_epochs = 10
     # TODO: define a loss function, optimizer and proceed with training. Hint: use the part 
     # of the training data as a validation split. After each epoch, compute the loss on the 
     # validation split and print it out. This enables you to see how your model is performing 
@@ -294,7 +294,7 @@ if __name__ == '__main__':
     X_val, y_val = zip(*val_data)
     
     # Create data loaders for the training data   
-    train_loader = create_loader_from_np(np.array(X), np.array(y), train = True, batch_size=64)
+    train_loader = create_loader_from_np(np.array(X), np.array(y), train = True, batch_size=128)
     # Create data loaders for the validation data
     val_loader = create_loader_from_np(np.array(X_val), np.array(y_val), train=True, batch_size=64)
     # delete the loaded training data to save memory, as the data loader copies
