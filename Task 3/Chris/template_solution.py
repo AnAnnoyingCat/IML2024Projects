@@ -198,7 +198,7 @@ def train_model(train_loader, val_loader):
     model = Net()
     model.train()
     model.to(device)
-    n_epochs = 7
+    n_epochs = 20
     # TODO: define a loss function, optimizer and proceed with training. Hint: use the part 
     # of the training data as a validation split. After each epoch, compute the loss on the 
     # validation split and print it out. This enables you to see how your model is performing 
@@ -218,8 +218,8 @@ def train_model(train_loader, val_loader):
             optimizer.step()
             epoch_loss += loss.item()
             
-        
-        print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}, Validation Accuracy: {get_error(model, val_loader):.4f}")
+        #{get_error(model, val_loader):.4f}
+        print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}, Validation Accuracy: not rn")
     return model
 
 def get_error(model, val_loader):
@@ -267,7 +267,7 @@ def test_model(model, loader, validation_set=False):
     if validation_set:
         np.savetxt("Task 3\\Chris\\val_results.txt", predictions, fmt='%i')
     else:
-        np.savetxt("Task 3\\Chris\\results_7ep_swin.txt", predictions, fmt='%i')
+        np.savetxt("Task 3\\Chris\\full_res_swin_20ep.txt", predictions, fmt='%i')
     
 
 # Main function. You don't have to change this
@@ -294,7 +294,7 @@ if __name__ == '__main__':
     X_val, y_val = zip(*val_data)
     
     # Create data loaders for the training data   
-    train_loader = create_loader_from_np(np.array(X_train), np.array(y_train), train = True, batch_size=64)
+    train_loader = create_loader_from_np(np.array(X), np.array(y), train = True, batch_size=64)
     # Create data loaders for the validation data
     val_loader = create_loader_from_np(np.array(X_val), np.array(y_val), train=True, batch_size=64)
     # delete the loaded training data to save memory, as the data loader copies
