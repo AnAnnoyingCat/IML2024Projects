@@ -40,21 +40,35 @@ def generate_embeddings():
         transforms.ToTensor(), 
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]);
 
-    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=resNet_pre_transforms)
+    efficientnet_b7_pre_transforms = transforms.Compose([
+        transforms.Resize(size=600, interpolation=transforms.InterpolationMode.BICUBIC), 
+        transforms.CenterCrop(size=600),
+        transforms.ToTensor(), 
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]);
+
+    densenet201_pre_transforms = transforms.Compose([
+    transforms.Resize(size=256, interpolation=transforms.InterpolationMode.BILINEAR), 
+    transforms.CenterCrop(size=224),
+    transforms.ToTensor(), 
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]);
+
+    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=densenet201_pre_transforms)
 
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=64,
                               shuffle=False,
                               pin_memory=True, num_workers=8)
 
-    model = torchvision.models.resnet18(weights='DEFAULT')
+    model = torchvision.models.densenet121(weights='DEFAULT')
+    #print(model)
 
     #removing classification layer
     embedding_model = torch.nn.Sequential(*(list(model.children())[:-1]))
+    #print(embedding_model)
     #move my model to GPU if present
     embedding_model.to(device)
     embedding_model.eval()
-
+    print("Starting to process batches")
     embeddings = []
     i = 0
     for batch, _ in train_loader:
@@ -71,7 +85,7 @@ def generate_embeddings():
 
     embeddings_np = embeddings.numpy()
 
-    np.save('Task 3/Chris/resNet_avgpool2d_embeddings.npy', embeddings_np)
+    np.save('Task 3/Chris/densenet121_embeddings.npy', embeddings_np)
 
 
 def get_data(file, train=True):
@@ -93,7 +107,7 @@ def get_data(file, train=True):
     train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/",
                                          transform=None)
     filenames = [s[0].split('/')[-1].replace('.jpg', '')[-5:] for s in train_dataset.samples]
-    embeddings = np.load('Task 3/Chris/resNet_avgpool2d_embeddings.npy')
+    embeddings = np.load('IgnoredFolder/densenet201_embeddings.npy')
     # TODO: Normalize the embeddings
     #norms = np.linalg.norm(embeddings, axis=1, keepdims=True) #J (hope this is correct)
     #embeddings = embeddings / norms #J (hope this is correct) """
@@ -262,8 +276,8 @@ if __name__ == '__main__':
 
     # generate embedding for each image in the dataset
     
-    #generate_embeddings() 
-    
+    generate_embeddings() 
+    """
     # load the training data
     X, y = get_data(TRAIN_TRIPLETS)
     
@@ -305,3 +319,4 @@ if __name__ == '__main__':
     # test the model on the test data
     test_model(model, test_loader)
     print("Results saved to results.txt")
+    """
