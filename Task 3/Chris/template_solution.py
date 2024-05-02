@@ -52,14 +52,14 @@ def generate_embeddings():
     transforms.ToTensor(), 
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]);
 
-    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=densenet201_pre_transforms)
+    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=swin_pre_transforms)
 
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=64,
                               shuffle=False,
                               pin_memory=True, num_workers=8)
 
-    model = torchvision.models.densenet121(weights='DEFAULT')
+    model = torchvision.models.swin_b(weights='DEFAULT')
     #print(model)
 
     #removing classification layer
@@ -107,7 +107,7 @@ def get_data(file, train=True):
     train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/",
                                          transform=None)
     filenames = [s[0].split('/')[-1].replace('.jpg', '')[-5:] for s in train_dataset.samples]
-    embeddings = np.load('IgnoredFolder/densenet201_embeddings.npy')
+    embeddings = np.load('Task 3/Chris/swin_b_embeddings_fixed.npy')
     # TODO: Normalize the embeddings
     #norms = np.linalg.norm(embeddings, axis=1, keepdims=True) #J (hope this is correct)
     #embeddings = embeddings / norms #J (hope this is correct) """
@@ -163,7 +163,7 @@ class Net(nn.Module):
         The constructor of the model.
         """
         super().__init__()
-        self.fc = nn.Linear(1536, 128)
+        self.fc = nn.Linear(3072, 128)
         self.fc2 = nn.Linear(128, 32)
         self.fc3 = nn.Linear(32, 1)
 
@@ -276,8 +276,8 @@ if __name__ == '__main__':
 
     # generate embedding for each image in the dataset
     
-    generate_embeddings() 
-    """
+    #generate_embeddings() 
+    
     # load the training data
     X, y = get_data(TRAIN_TRIPLETS)
     
@@ -319,4 +319,4 @@ if __name__ == '__main__':
     # test the model on the test data
     test_model(model, test_loader)
     print("Results saved to results.txt")
-    """
+    
