@@ -163,9 +163,9 @@ class Net(nn.Module):
         The constructor of the model.
         """
         super().__init__()
-        self.fc = nn.Linear(3072, 128)
-        self.fc2 = nn.Linear(128, 32)
-        self.fc3 = nn.Linear(32, 1)
+        self.fc = nn.Linear(3072, 256)
+        self.fc2 = nn.Linear(256, 128)
+        self.fc3 = nn.Linear(128, 1)
 
     def forward(self, x):
         """
@@ -198,7 +198,7 @@ def train_model(train_loader, val_loader):
     model = Net()
     model.train()
     model.to(device)
-    n_epochs = 10
+    n_epochs = 7
     # TODO: define a loss function, optimizer and proceed with training. Hint: use the part 
     # of the training data as a validation split. After each epoch, compute the loss on the 
     # validation split and print it out. This enables you to see how your model is performing 
@@ -237,6 +237,7 @@ def get_error(model, val_loader):
             predicted = (outputs > 0.5).float()
             total += y_val.size(0)
             correct += (predicted == y_val.unsqueeze(1)).sum().item()
+    model.train()
     return correct / total
 
 
@@ -266,7 +267,7 @@ def test_model(model, loader, validation_set=False):
     if validation_set:
         np.savetxt("Task 3\\Chris\\val_results.txt", predictions, fmt='%i')
     else:
-        np.savetxt("Task 3\\Chris\\results4.txt", predictions, fmt='%i')
+        np.savetxt("Task 3\\Chris\\results_7ep_swin.txt", predictions, fmt='%i')
     
 
 # Main function. You don't have to change this
