@@ -24,55 +24,28 @@ def generate_embeddings():
     Transform, resize and normalize the images and then use a pretrained model to extract 
     the embeddings.
     """
-    """ # TODO: define a transform to pre-process the images
-    # The required pre-processing depends on the pre-trained model you choose 
-    # below. 
-    # See https://pytorch.org/vision/stable/models.html#using-the-pre-trained-models
-    train_transforms = transforms.Compose([transforms.ToTensor()])
-
-    train_dataset = datasets.ImageFolder(root="dataset/", transform=train_transforms)
-    # Hint: adjust batch_size and num_workers to your PC configuration, so that you don't 
-    # run out of memory (VRAM if on GPU, RAM if on CPU)
-    train_loader = DataLoader(dataset=train_dataset,
-                              batch_size=64,
-                              shuffle=False,
-                              pin_memory=True, num_workers=16)
-
-    # TODO: define a model for extraction of the embeddings (Hint: load a pretrained model,
-    #  more info here: https://pytorch.org/vision/stable/models.html)
-    model = nn.Module()
-    model.to(device)
-    embedding_size = 1000 # Dummy variable, replace with the actual embedding size once you 
-    # pick your model
-    num_images = len(train_dataset)
-    embeddings = np.zeros((num_images, embedding_size))
-    # TODO: Use the model to extract the embeddings. Hint: remove the last layers of the 
-    # model to access the embeddings the model generates. 
-
-    np.save('dataset/embeddings.npy', embeddings) """
-    
-    ##########################################################################3
     # Using SwinTransformer due to its recency and good performance on various tasks
     
-    train_transforms = transforms.Compose([
+    swin_pre_transforms = transforms.Compose([
         transforms.Resize(size=238, interpolation=transforms.InterpolationMode.BICUBIC), 
         transforms.CenterCrop(size=224),
         transforms.ToTensor(), 
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]);
     
-    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=train_transforms)
+    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=swin_pre_transforms)
 
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=64,
                               shuffle=False,
                               pin_memory=True, num_workers=8)
 
-    model = torchvision.models.swin_b()
+    model = torchvision.models.swin_b(weights="DEFAULT")
 
     #removing classification layer
     embedding_model = torch.nn.Sequential(*(list(model.children())[:-1]))
     #move my model to GPU if present
     embedding_model.to(device)
+    embedding_model.eval()
 
 
     embeddings = []
@@ -82,11 +55,12 @@ def generate_embeddings():
         with torch.no_grad():
             #calculate batch
             batch_embeddings = embedding_model(inputs)
+            batch_embeddings = torch.squeeze(batch_embeddings)
             embeddings.append(batch_embeddings.to(torch.device('cpu'))) #move back to CPU
             print(f"finished batch {i}")
             i+=1
 
-    embeddings = torch.cat(embeddings, dim=0)
+    embeddings = torch.cat(embeddings)
 
     embeddings_np = embeddings.numpy()
 
@@ -109,12 +83,11 @@ def get_data(file, train=True):
             triplets.append(line)
 
     # generate training data from triplets
-    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/", transform=None)
+    train_dataset = datasets.ImageFolder(root="Task 3/Data/dataset/",
+                                         transform=None)
     filenames = [s[0].split('/')[-1].replace('.jpg', '')[-5:] for s in train_dataset.samples]
-    embeddings = np.load('Task 3/Chris/embeddings.npy')
+    embeddings = np.load('Task 3/Chris/swin_b_embeddings_fixed.npy')
     # TODO: Normalize the embeddings
-    norms = np.linalg.norm(embeddings, axis=1, keepdims=True) #J (hope this is correct)
-    embeddings = embeddings / norms #J (hope this is correct) """
 
     file_to_embedding = {}
     for i in range(len(filenames)):
@@ -168,7 +141,7 @@ class Net(nn.Module):
         The constructor of the model.
         """
         super().__init__()
-        self.fc = nn.Linear(3072, 128)
+        self.fc = nn.Linear(3072, 5128)
         self.fc2 = nn.Linear(128, 32)
         #self.fc3 = nn.Linear(512, 128)
         self.fc4 = nn.Linear(32, 1)
@@ -181,22 +154,18 @@ class Net(nn.Module):
 
         output: x: torch.Tensor, the output of the model
         """
-        #print("Input size:", x.size())
+       
         x = self.fc(x)
         x = F.relu(x)
         
-        #print("After fc1 size:", x.size())
         x = self.fc2(x)
         x = F.relu(x)
         
-        #print("After fc2 size:", x.size())
         """ x = self.fc3(x)
         x = F.relu(x) """
         
-       # print("After fc3 size:", x.size())
         x = self.fc4(x)
         x = torch.sigmoid(x)
-        #print("Output size:", x.size())
         
         return x
 
@@ -219,7 +188,7 @@ def train_model(train_loader):
     # on the validation data before submitting the results on the server. After choosing the 
     # best model, train it on the whole training data.
     criterion = nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0004)
     
     for epoch in range(n_epochs): 
         epoch_loss = 0       
@@ -233,8 +202,8 @@ def train_model(train_loader):
             epoch_loss += loss.item()
         
         print(f"Epoch {epoch + 1}, loss: {epoch_loss / len(train_loader)}")
-            
     return model
+
 
 def test_model(model, loader, validation_set=False):
     """
@@ -291,8 +260,7 @@ if __name__ == '__main__':
     # Create data loaders for the training data   
     train_loader = create_loader_from_np(np.array(X_train), np.array(y_train), train = True, batch_size=64)
     # Create data loaders for the validation data
-    val_loader = create_loader_from_np(np.array(X_val), np.array(y_val), train=False, batch_size=64)
-    quick_test_loader = create_loader_from_np(np.array(X_train), np.array(y_train), train=False, batch_size=64)
+    val_loader = create_loader_from_np(np.array(X_val), np.array(y_val), train=True, batch_size=64)
     
     # delete the loaded training data to save memory, as the data loader copies
     del X
@@ -314,31 +282,8 @@ if __name__ == '__main__':
     model = train_model(train_loader)
     
     val_model = test_model(model, val_loader, validation_set=True)
-    correctPredictions = 0
-    totalPredictions = 0
-    
-    with (open("Task 3/Jasmin/val_results.txt", "r")) as f:
-        for line in f:
-            for prediction in line.split():
-                if prediction == "1":
-                    correctPredictions += 1
-                totalPredictions += 1
-    print(f"Validation accuracy: {correctPredictions / totalPredictions}")
-    
-    
-    #test model on the trianing data --> should give nearly 100 % accuracy since it's trained on this data. If this is not the case, there is a problem with the model
-    # accuracy is actually about 0.48, so we do have a problem with the model
-    quick_test_model = test_model(model, quick_test_loader, validation_set=True)
-    with (open("Task 3/Jasmin/val_results.txt", "r")) as f:
-        for line in f:
-            for prediction in line.split():
-                if prediction == "1":
-                    correctPredictions += 1
-                totalPredictions += 1
-    print(f"Validation accuracy of quick test: {correctPredictions / totalPredictions}")
     
     
     # test the model on the test data
     test_model(model, test_loader)
     print("Results saved to results.txt")
- 
