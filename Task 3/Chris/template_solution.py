@@ -20,6 +20,10 @@ from PIL import Image
 # same device.
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+"""
+test best p with 12 reps or so again
+
+"""
 
 def generate_embeddings():
     """
@@ -163,6 +167,7 @@ class Net(nn.Module):
         The constructor of the model.
         """
         super().__init__()
+        self.dropout = nn.Dropout(0.7)
         self.fc = nn.Linear(3072, 256)
         self.fc2 = nn.Linear(256, 128)
         self.fc3 = nn.Linear(128, 1)
@@ -175,6 +180,7 @@ class Net(nn.Module):
 
         output: x: torch.Tensor, the output of the model
         """
+        x = self.dropout(x)
         x = self.fc(x)
         x = F.relu(x)
 
@@ -205,7 +211,7 @@ def train_model(train_loader, val_loader):
     # on the validation data before submitting the results on the server. After choosing the 
     # best model, train it on the whole training data.
     criterion = nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0004)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     
     for epoch in range(n_epochs): 
         epoch_loss = 0       
@@ -218,8 +224,7 @@ def train_model(train_loader, val_loader):
             optimizer.step()
             epoch_loss += loss.item()
             
-        #{get_error(model, val_loader):.4f}
-        print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}, Validation Accuracy: not rn")
+        print(f"Epoch [{epoch+1}/{n_epochs}], Train Loss: {epoch_loss / len(train_loader):.4f}, Validation Accuracy: {get_error(model, val_loader):.4f}")
     return model
 
 def get_error(model, val_loader):
@@ -267,7 +272,7 @@ def test_model(model, loader, validation_set=False):
     if validation_set:
         np.savetxt("Task 3\\Chris\\val_results.txt", predictions, fmt='%i')
     else:
-        np.savetxt("Task 3\\Chris\\full_res_swin_20ep.txt", predictions, fmt='%i')
+        np.savetxt("Task 3\\Chris\\res_swin_lr0.0001_using_dropout_10reps_p0.7.txt", predictions, fmt='%i')
     
 
 # Main function. You don't have to change this
@@ -294,7 +299,7 @@ if __name__ == '__main__':
     X_val, y_val = zip(*val_data)
     
     # Create data loaders for the training data   
-    train_loader = create_loader_from_np(np.array(X), np.array(y), train = True, batch_size=128)
+    train_loader = create_loader_from_np(np.array(X_train), np.array(y_train), train = True, batch_size=128)
     # Create data loaders for the validation data
     val_loader = create_loader_from_np(np.array(X_val), np.array(y_val), train=True, batch_size=64)
     # delete the loaded training data to save memory, as the data loader copies
@@ -310,7 +315,7 @@ if __name__ == '__main__':
 
     # repeat for testing data
     X_test, y_test = get_data(TEST_TRIPLETS, train=False)
-    test_loader = create_loader_from_np(X_test, train = False, batch_size=2048, shuffle=False)
+    test_loader = create_loader_from_np(X_test, train = False, batch_size=64, shuffle=False)
     del X_test
     del y_test
 
