@@ -97,7 +97,7 @@ test_loader = DataLoader(dataset=test_dataset,
 
 
 if __name__ == '__main__':
-    
+    """
     #the embeddings get generated in the train/testloader directly.
     print("starting the embedding process")
     model = AlbertModel.from_pretrained("albert/albert-base-v2")
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     scores_list = []
 
     #init pca
-    pca = PCA(n_components=64)
+    #pca = PCA(n_components=64)
     
     for batch in tqdm(test_loader, desc="Processing batches"):
         # move the stuff to GPU
@@ -124,37 +124,19 @@ if __name__ == '__main__':
             embeddings = outputs.last_hidden_state.cpu().numpy()
 
             # apply dimensionality reduction
-            reshaped_embeddings = embeddings.reshape(embeddings.shape[0], -1)
-            reduced_embeddings = pca.fit_transform(reshaped_embeddings)
+            #reshaped_embeddings = embeddings.reshape(embeddings.shape[0], -1)
+            #reduced_embeddings = pca.fit_transform(reshaped_embeddings)
 
-            #scores = batch['score'].tolist()
-
-            embeddings_list.append(reduced_embeddings)
-            #scores_list.extend(scores)
-        else:
-            pca = PCA(n_components=input_ids.size(0))
-            #forward pass
-            input_ids = input_ids.squeeze(1)
-            attention_mask = (input_ids != tokenizer.pad_token_id).float()
-            with torch.no_grad():
-                outputs = model(input_ids, attention_mask=attention_mask)
-
-            #get embeddings
-            embeddings = outputs.last_hidden_state.cpu().numpy()
-
-            # apply dimensionality reduction
-            reshaped_embeddings = embeddings.reshape(embeddings.shape[0], -1)
-            reduced_embeddings = pca.fit_transform(reshaped_embeddings)
-
-            #scores = batch['score'].tolist()
+            scores = batch['score'].tolist()
 
             embeddings_list.append(reduced_embeddings)
-            #scores_list.extend(scores)
-    #embeddings = np.concatenate(embeddings_list, axis=0)
-    #scores = np.array(scores_list)
+            scores_list.extend(scores)
 
-    #np.savez("embeddingsAndScoresPCAReduced.npy", embeddings=embeddings, scores=scores)
-    np.savez("embeddingsAndScoresPCAReduced.npy", embeddings=embeddings_list)
+    embeddings = np.concatenate(embeddings_list, axis=0)
+    scores = np.array(scores_list)
+
+    np.savez("embeddingsAndScoresPCAReduced.npy", embeddings=embeddings, scores=scores)
+    #np.savez("embeddingsAndScoresPCAReduced.npy", embeddings=embeddings_list)
 
     print("Saved embeddings and scores to embeddingsAndScores.npy")
 
@@ -213,7 +195,7 @@ if __name__ == '__main__':
             optimizer.step()
             epoch_loss += loss.item()
         print(f"Epoch [{epoch+1}/{NUM_EPOCHS}], Train Loss: {epoch_loss / len(train_loader):.4f}")
-"""
+
            
 
 """
