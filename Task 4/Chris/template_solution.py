@@ -106,9 +106,10 @@ class EmbeddedDatasetTest(Dataset):
 class MyModule(nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc1 = nn.Linear(768, 64)
-        self.fc2 = nn.Linear(64, 32)
-        self.fc3 = nn.Linear(32, 1)
+        self.fc1 = nn.Linear(768, 128)
+        self.fc2 = nn.Linear(128, 64)
+        self.fc3 = nn.Linear(64, 32)
+        self.fc4 = nn.Linear(32, 1)
         self.dropout = nn.Dropout(0.5)
 
     def forward(self, x):
@@ -116,7 +117,9 @@ class MyModule(nn.Module):
         x = self.dropout(x)
         x = F.relu(self.fc2(x))
         x = self.dropout(x)
-        x = self.fc3(x)
+        x = F.relu(self.fc3(x))
+        x = self.dropout(x)
+        x = self.fc4(x)
         return x
 
 def makeEmbeddings():
@@ -207,7 +210,7 @@ if __name__ == '__main__':
     model = MyModule()
     scheduler = None
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0004)
 
     #=================TRAIN========================
     model.to(DEVICE)
@@ -251,7 +254,7 @@ if __name__ == '__main__':
             X = X.to(DEVICE)
             test_output = model(X)
             results.append(test_output.cpu().numpy())
-        with open("result_mean.txt", "w") as f:
+        with open("result_mean_biggernn.txt", "w") as f:
             for batch_results in results:
                 for val in batch_results:
                     f.write(f"{val}\n")
