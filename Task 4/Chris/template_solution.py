@@ -189,7 +189,7 @@ def makeEmbeddings():
 
 
 if __name__ == '__main__':
-    train_path = "Task 4\Chris\distilbertEmbeddings_cls.npy.npz"
+    train_path = "Task 4\Chris\distilbertEmbeddings_mean.npy.npz"
     data = np.load(train_path)
     embeddings = data['embeddings']
     scores = data['scores']
@@ -237,7 +237,7 @@ if __name__ == '__main__':
         val_loss /= len(val_loader)
         print(f"Epoch [{epoch+1}/{NUM_EPOCHS}], Train Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}")
 
-    test_path = "Task 4\Chris\distilbertEmbeddings_cls_test.npy.npz"
+    test_path = "Task 4\Chris\distilbertEmbeddings_mean_test.npy.npz"
     data_test = np.load(test_path)
     embeddings_test = data_test['embeddings']
 
@@ -251,7 +251,7 @@ if __name__ == '__main__':
             X = X.to(DEVICE)
             test_output = model(X)
             results.append(test_output.cpu().numpy())
-        with open("Task 4\Chris\result.txt", "w") as f:
+        with open("result_mean.txt", "w") as f:
             for batch_results in results:
                 for val in batch_results:
                     f.write(f"{val}\n")
