@@ -208,9 +208,9 @@ if __name__ == '__main__':
     val_loader = DataLoader(dataset=val_dataset, batch_size=64, shuffle=False, num_workers=4, pin_memory=True)
 
     model = MyModule()
-    scheduler = None
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0004)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True)
 
     #=================TRAIN========================
     model.to(DEVICE)
@@ -254,7 +254,8 @@ if __name__ == '__main__':
             X = X.to(DEVICE)
             test_output = model(X)
             results.append(test_output.cpu().numpy())
-        with open("result_cls_biggernn.txt", "w") as f:
+        with open("result_cls_biggernn_withscheduler.txt", "w") as f:
             for batch_results in results:
                 for val in batch_results:
                     f.write(f"{val}\n")
+    scheduler.step(val_loss)
